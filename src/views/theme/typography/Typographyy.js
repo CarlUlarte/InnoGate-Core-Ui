@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState } from 'react';
 import {
   CButton,
   CCard,
@@ -10,405 +10,189 @@ import {
   CFormLabel,
   CFormTextarea,
   CRow,
-} from '@coreui/react'
-import { DocsExample } from 'src/components'
-
+  CFormSelect,
+  CContainer
+} from '@coreui/react';
+import { cilPlus } from '@coreui/icons';
+import CIcon from '@coreui/icons-react';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 const Typographyy = () => {
-  const [formContainers, setFormContainers] = useState(1);
-  const [submittedForms, setSubmittedForms] = useState([false]); // Track submission status for each form
-  const formRefs = useRef([]); // Use an array to store refs for each form
+  // Track the forms and their submission statuses
+  const [forms, setForms] = useState([
+    { id: 1, submitted: false, fields: { title: '', description: '', client: '', field: '' } }
+  ]);
 
-  const addFormContainer = () => {
-    setFormContainers(formContainers + 1);
-    setSubmittedForms([...submittedForms, false]); // Add a new submission status for the added form
+  // Add a new form to the list
+  const addForm = () => {
+    setForms([...forms, { id: forms.length + 1, submitted: false, fields: { title: '', description: '', client: '', field: '' } }]);
   };
 
-  const handleSubmit = (event, index) => {
-    event.preventDefault();
-    const form = event.target;
-    const inputs = form.querySelectorAll("input, textarea, select");
-    let isValid = true;
-
-    inputs.forEach((input) => {
-      if (!input.value.trim()) {
-        isValid = false;
-      }
-    });
-
-    if (isValid) {
-      const newSubmittedForms = [...submittedForms];
-      newSubmittedForms[index] = true; // Mark the form as submitted
-      setSubmittedForms(newSubmittedForms);
-      // Here you can perform additional actions like submitting the form data
-    } else {
-      alert("Please fill in all fields before submitting.");
-    }
+  // Handle form field changes
+  const handleFieldChange = (index, field, value) => {
+    const updatedForms = [...forms];
+    updatedForms[index].fields[field] = value;
+    setForms(updatedForms);
   };
 
-  useEffect(() => {
-    if (formRefs.current[formContainers - 2]) {
-      formRefs.current[formContainers - 2].scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
+  // Handle form submission
+  const handleSubmit = (index) => {
+    const form = forms[index];
+    const { title, description, client, field } = form.fields;
+
+    // Check if all fields are filled
+    if (!title || !description || !client || !field) {
+      alert('Please fill in all fields before submitting.');
+      return;
     }
-  }, [formContainers]);
+
+    // Mark the form as submitted
+    const updatedForms = [...forms];
+    updatedForms[index].submitted = true;
+    setForms(updatedForms);
+  };
+
+  // Render all the forms
+  const renderForms = () => {
+    return (
+      <TransitionGroup>
+        {forms.map((form, index) => (
+          <CSSTransition
+            key={form.id}
+            timeout={500}
+            classNames="fade"
+          >
+            <CCol xs={12}>
+              <CCard className="mb-4">
+                <CCardHeader>
+                  <strong>Topic Proposal Form {form.id}</strong>
+                </CCardHeader>
+                <CCardBody>
+                  <CForm>
+                    {/* Title Field */}
+                    <div className="mb-3">
+                      <CFormLabel htmlFor={`titleInput${index}`}>Title</CFormLabel>
+                      <CFormInput
+                        id={`titleInput${index}`}
+                        value={form.fields.title}
+                        onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
+                        disabled={form.submitted}
+                      />
+                    </div>
+
+                    {/* Description Field */}
+                    <div className="mb-3">
+                      <CFormLabel htmlFor={`descriptionTextarea${index}`}>Description</CFormLabel>
+                      <CFormTextarea
+                        id={`descriptionTextarea${index}`}
+                        rows={3}
+                        value={form.fields.description}
+                        onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
+                        disabled={form.submitted}
+                      />
+                    </div>
+
+                    {/* Client and Field (side by side) */}
+                    <CRow>
+                      <CCol md={6}>
+                        <div className="mb-3">
+                          <CFormLabel htmlFor={`clientInput${index}`}>Client</CFormLabel>
+                          <CFormInput
+                            id={`clientInput${index}`}
+                            value={form.fields.client}
+                            onChange={(e) => handleFieldChange(index, 'client', e.target.value)}
+                            disabled={form.submitted}
+                          />
+                        </div>
+                      </CCol>
+                      <CCol md={6}>
+                        <div className="mb-3">
+                          <CFormLabel htmlFor={`fieldSelect${index}`}>Field</CFormLabel>
+                          <CFormSelect
+                            id={`fieldSelect${index}`}
+                            value={form.fields.field}
+                            onChange={(e) => handleFieldChange(index, 'field', e.target.value)}
+                            disabled={form.submitted}
+                          >
+                            <option value="">Choose a field...</option>
+                            <option value="field1">Field 1</option>
+                            <option value="field2">Field 2</option>
+                            <option value="field3">Field 3</option>
+                          </CFormSelect>
+                        </div>
+                      </CCol>
+                    </CRow>
+
+                    {/* Submit Button next to form */}
+                    <CRow className="justify-content-end">
+                      <CCol xs="auto">
+                        <CButton
+                          color={form.submitted ? 'secondary' : 'success'}
+                          onClick={() => handleSubmit(index)}
+                          disabled={form.submitted}
+                        >
+                          {form.submitted ? 'Submitted' : 'Submit'}
+                        </CButton>
+                      </CCol>
+                    </CRow>
+                  </CForm>
+                </CCardBody>
+              </CCard>
+            </CCol>
+          </CSSTransition>
+        ))}
+      </TransitionGroup>
+    );
+  };
 
   return (
-    <div className="container">
-      <style jsx>{`
-        @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap");
-
-        .text {
-          margin-top: 100px;
-          font-size: 50px;
-          color: rgb(174, 170, 170);
-        }
-
-        * {
-          font-family: "Open Sans", sans-serif;
-        }
-
-        .pageTitle {
-          text-align: center;
-          font-size: 35px;
-          margin-bottom: 50px;
-        }
-
-        .container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-
-        .formSection {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .formWrapper {
-          margin-bottom: 20px;
-        }
-
-        .proposalTitle {
-          text-align: center;
-          font-size: 35px;
-          margin-bottom: 20px;
-          margin-top: 20px;
-        }
-
-        /* Additional CSS for same-length class */
-        .sameLength {
-          width: calc(100% - 16px);
-        }
-
-        .container {
-          position: relative;
-        }
-
-        .addButton {
-          position: fixed;
-          bottom: 50px;
-          right: 60px;
-          width: 75px;
-          height: 75px;
-          background-color: #8d4242;
-          color: #fff;
-          border: none;
-          border-radius: 50%;
-          font-size: 40px;
-          cursor: pointer;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 999;
-        }
-
-        .addButton:hover {
-          background-color: #673333;
-        }
-
-        .submissionIndicator {
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          margin-top: 10px;
-        }
-
-        .orange {
-          background-color: orange;
-        }
-
-        .red {
-          background-color: red;
-        }
-
-        .green {
-          background-color: green;
-        }
-
-        @keyframes formEntrance {
-          0% {
+    <CContainer>
+      {/* Inline style for animation */}
+      <style>
+        {`
+          .fade-enter {
             opacity: 0;
-            transform: scale(0.5); /* Start smaller */
+            transform: scale(0.9);
           }
-          100% {
+          .fade-enter-active {
             opacity: 1;
-            transform: scale(1); /* Pop up to full size */
+            transform: scale(1);
+            transition: opacity 500ms, transform 500ms;
           }
-        }
+          .fade-exit {
+            opacity: 1;
+          }
+          .fade-exit-active {
+            opacity: 0;
+            transition: opacity 500ms;
+          }
+        `}
+      </style>
 
-        .animatedForm {
-          animation: formEntrance 0.5s ease forwards;
-          opacity: 0;
-        }
+      {renderForms()}
 
-        .formContainer {
-          display: flex;
-          width: 900px;
-          height: 600px;
-          background-color: white;
-          border-radius: 20px;
-          flex-direction: column;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-          margin-top: 50px;
-        }
-
-        .formContainer button {
-          padding: 12px 24px;
-          background-color: #8d4242;
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          width: 100px;
-          height: 50px;
-          position: relative;
-          right: 130px;
-          top: 100px;
-        }
-
-        .formContainer button:hover {
-          background-color: #673333;
-        }
-
-        .formContainer label {
-          font-weight: 600;
-        }
-
-        .cont1 {
-          /* background-color: pink; */
-          display: flex;
-          flex-direction: column;
-          width: 100%;
-          height: 70%;
-          padding-top: 70px;
-        }
-
-        .cont1 .field {
-          display: flex;
-          align-items: center;
-          width: 100%;
-        }
-
-        .cont1 .field label {
-          display: inline-block; /* Ensures the width applies */
-          width: 120px; /* Adjust the width to your preference */
-          text-align: right; /* Aligns the text to the right */
-          margin-right: 30px;
-        }
-
-        .cont1 .field input,
-        .cont1 .field textarea {
-          box-sizing: border-box;
-          background-color: #d9d9d9;
-        }
-
-        .titleInput {
-          max-width: 650px;
-          border-radius: 15px;
-          height: 60px;
-        }
-        .detailsInput {
-          width: 650px;
-          height: 150px;
-          margin-top: 40px;
-          border: none;
-          border-radius: 15px;
-          padding: 10px;
-          resize: none;
-          margin-left: 5px;
-          font-size: 17px;
-        }
-
-        .cont2 {
-          /* background-color: skyblue; */
-          height: 50%;
-          display: flex;
-          gap: 40px;
-          margin-left: 85px;
-        }
-
-        .cont2 .field {
-          display: flex;
-        }
-
-        .cont2 .field label {
-          margin-top: 15px;
-          margin-right: 20px;
-        }
-
-        .clientInput {
-          min-width: 255px;
-          height: 30px;
-          background-color: #d9d9d9;
-          border-radius: 10px;
-        }
-
-        .fieldInput {
-          width: 275px;
-          height: 50px;
-          background-color: #d9d9d9;
-          border-radius: 10px;
-          border: none;
-          padding: 5px;
-        }
-      `}</style>
-      
-      <div className="formSection">
-        <div className="formWrapper">
-          <h2 className="pageTitle">PROPOSAL</h2>
-
-          <form onSubmit={(event) => handleSubmit(event, 0)}>
-            <div className="formContainer">
-              <div className="cont1">
-                <div className="field">
-                  <label htmlFor="title">Title:</label>
-                  <input
-                    type="text"
-                    id="title"
-                    name="title"
-                    className="titleInput"
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="details">Details:</label>
-                  <textarea
-                    type="text"
-                    id="details"
-                    name="details"
-                    rows="4"
-                    cols="50"
-                    className="detailsInput"
-                  />
-                </div>
-              </div>
-              <div className="cont2">
-                <div className="field">
-                  <label htmlFor="client">Client:</label>
-                  <input
-                    type="text"
-                    id="client"
-                    name="client"
-                    className="clientInput"
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="field" className="fieldLabel">
-                    Field:
-                  </label>
-                  <select id="field" name="field" className="fieldInput">
-                    <option value="option1">Option 1</option>
-                    <option value="option2">Option 2</option>
-                    <option value="option3">Option 3</option>
-                    {/* Add more options as needed */}
-                  </select>
-                </div>
-                {!submittedForms[0] && <button type="submit">Submit</button>}
-                {submittedForms[0] && (
-                  <div className="submissionIndicator orange"></div>
-                )}
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {[...Array(formContainers - 1)].map((_, index) => (
-          <div
-            className={`formWrapper animatedForm`}
-            key={index + 1}
-          >
-            <form onSubmit={(event) => handleSubmit(event, index + 1)}>
-              <div
-                className="formContainer"
-                ref={(ref) => (formRefs.current[index] = ref)}
-              >
-                <div className="cont1">
-                  <div className="field">
-                    <label htmlFor={`title_${index + 1}`}>Title:</label>
-                    <input
-                      type="text"
-                      id={`title_${index + 1}`}
-                      name={`title_${index + 1}`}
-                      className="titleInput"
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor={`details_${index + 1}`}>Details:</label>
-                    <textarea
-                      id={`details_${index + 1}`}
-                      name={`details_${index + 1}`}
-                      rows="4"
-                      cols="50"
-                      className="detailsInput"
-                    />
-                  </div>
-                </div>
-                <div className="cont2">
-                  <div className="field">
-                    <label htmlFor={`client_${index + 1}`}>Client:</label>
-                    <input
-                      type="text"
-                      id={`client_${index + 1}`}
-                      name={`client_${index + 1}`}
-                      className="clientInput"
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor={`field_${index + 1}`} className="fieldLabel">
-                      Field:
-                    </label>
-                    <select
-                      id={`field_${index + 1}`}
-                      name={`field_${index + 1}`}
-                      className="fieldInput"
-                    >
-                      <option value="option1">Option 1</option>
-                      <option value="option2">Option 2</option>
-                      <option value="option3">Option 3</option>
-                      {/* Add more options as needed */}
-                    </select>
-                  </div>
-                  {!submittedForms[index + 1] && (
-                    <button type="submit">Submit</button>
-                  )}
-                  {submittedForms[index + 1] && (
-                    <div className="submissionIndicator orange"></div>
-                  )}
-                </div>
-              </div>
-            </form>
-          </div>
-        ))}
-      </div>
-      <button className="addButton" onClick={addFormContainer}>
-        +
-      </button>
-    </div>
-    
+      {/* Floating circular button above the footer */}
+      <CButton
+        onClick={addForm}
+        color="primary"
+        className="circular-button"
+        style={{
+          position: 'fixed',
+          bottom: '60px',  // Adjusted position to be above the footer
+          right: '20px',
+          borderRadius: '50%',
+          width: '60px',
+          height: '60px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          fontSize: '24px',
+        }}
+      >
+        <CIcon icon={cilPlus} size="lg" />
+      </CButton>
+    </CContainer>
   );
-}
+};
 
-export default Typographyy
+export default Typographyy;
