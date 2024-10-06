@@ -12,6 +12,7 @@ import {
   cilPuzzle,
   cilSpeedometer,
   cilStar,
+  cilNoteAdd,
 } from '@coreui/icons'
 import { CNavGroup, CNavItem, CNavTitle } from '@coreui/react'
 
@@ -42,6 +43,13 @@ const _nav = [
       color: 'info',
       text: 'NEW',
     },
+  },
+
+  {
+    component: CNavItem,
+    name: 'Proposals',
+    to: '/theme/typographyy',
+    icon: <CIcon icon={cilNoteAdd} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
