@@ -15,9 +15,10 @@ import {
   CRow,
   CCol,
 } from '@coreui/react'
-import { addDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
+import { setDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from 'src/backend/firebase'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 
 const CreateAccount = () => {
   const [users, setUsers] = useState([])
@@ -40,17 +41,19 @@ const CreateAccount = () => {
 
   const handleAddUser = async () => {
     try {
+      // Create user with Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
-      await addDoc(collection(db, 'users'), {
-        uid: user.uid,
+      // Use the UID from Firebase Auth as the document ID in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid, // Save UID explicitly for reference
         name,
         email,
         role,
       })
 
-      setUsers([...users, { name, email, role }])
+      setUsers([...users, { id: user.uid, name, email, role }])
       setName('')
       setEmail('')
       setRole('')
@@ -60,9 +63,9 @@ const CreateAccount = () => {
       console.error('Error adding user: ', error)
     }
   }
-
   const handleDeleteUser = async (userId) => {
     try {
+      // Delete user document using UID as the document ID
       await deleteDoc(doc(db, 'users', userId))
       setUsers(users.filter((user) => user.id !== userId))
     } catch (error) {
@@ -81,7 +84,7 @@ const CreateAccount = () => {
         </div>
       </CCardHeader>
       <CCardBody>
-        <CRow>
+        <CRow className="mb-4">
           <CCol sm={3}>
             <strong>Name</strong>
           </CCol>
