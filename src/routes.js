@@ -3,7 +3,7 @@ import React from 'react'
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 const Colors = React.lazy(() => import('./views/theme/colors/Colors'))
 const Typography = React.lazy(() => import('./views/theme/typography/Typography'))
-const Typographyy = React.lazy(() => import('./views/theme/typography/Typographyy'))
+const StudProposal = React.lazy(() => import('./views/dashboard/StudProposal'))
 
 // Base
 const Accordion = React.lazy(() => import('./views/base/accordion/Accordion'))
@@ -58,7 +58,7 @@ const routes = [
   { path: '/theme', name: 'Theme', element: Colors, exact: true },
   { path: '/theme/colors', name: 'Colors', element: Colors },
   { path: '/theme/typography', name: 'Typography', element: Typography },
-  { path: '/theme/typographyy', name: 'Typographyy', element: Typographyy },
+  { path: '/theme/StudProposal', name: 'StudProposal', element: StudProposal },
   { path: '/base', name: 'Base', element: Cards, exact: true },
   { path: '/base/accordion', name: 'Accordion', element: Accordion },
   { path: '/base/breadcrumbs', name: 'Breadcrumbs', element: Breadcrumbs },
