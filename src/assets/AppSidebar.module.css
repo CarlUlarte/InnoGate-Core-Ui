@@ -1,0 +1,10 @@
+/* AppSidebar.module.css */
+.nav-link.active {
+    background-color: red !important; /* Change background color to red */
+    color: white !important;          /* Change text color to white */
+}
+
+.navLinkHover:hover {
+    background-color: darkred; /* Change background color to dark red on hover */
+    color: white;              /* Keep text color white on hover */
+}
