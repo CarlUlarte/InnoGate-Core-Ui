@@ -1,0 +1,101 @@
+.rbc-header {
+  background-color: #2f3947; // CoreUI dark blue
+  padding: 10px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.rbc-calendar {
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: #1e2a38; // Dark background for the calendar body
+}
+
+.rbc-button-link {
+  font-size: 14px;
+  color: #ced4da; // Lighter gray for button links
+  font-weight: 500;
+}
+
+.rbc-off-range .rbc-button-link {
+  color: #adb5bd; // Gray for off-range days
+}
+
+.rbc-day-bg.rbc-off-range-bg {
+  background-color: #344050; // Darker off-range background
+}
+
+.rbc-event {
+  background-color: #3a506a; // Dark blue for event background
+  color: #dddbdb; // White text for contrast
+  font-weight: 700;
+  margin: auto;
+  width: 80%;
+  border-radius: 4px;
+}
+
+.rbc-event.rbc-selected {
+  background-color: #1f4b6e; // Even darker blue for selected events
+}
+
+.rbc-day-bg {
+  background-color: #2b3e50; // Dark background for days
+}
+
+.rbc-row-bg {
+  border-bottom: 1px solid #3b495a; // Soft border between rows
+}
+
+.rbc-time-slot {
+  border-right: 1px solid #3b495a; // Soft border for time slots
+}
+
+.rbc-time-header-content .rbc-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rbc-time-header-content .rbc-header .rbc-button-link {
+  font-size: 18px;
+  padding: 8px;
+  color: #f8f9fa; // Lighter text for button links
+}
+
+.rbc-btn-group button {
+  font-size: 16px;
+  background-color: #3a506a; // Dark blue background for buttons
+  color: #f8f9fa; // Light text
+  border: 1px solid #2f3947; // Border with the dark blue
+  width: 90px;
+  border-radius: 4px;
+}
+
+.rbc-toolbar-label {
+  font-size: 26px;
+  color: #f8f9fa; // White text for toolbar label
+  font-weight: 600;
+}
+
+.add-button {
+  position: fixed;
+  bottom: 50px;
+  right: 60px;
+  width: 75px;
+  height: 75px;
+  background-color: #2f3947; // CoreUI dark blue
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 40px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.add-button:hover {
+  background-color: #1c2736; // Darker blue on hover
+}
