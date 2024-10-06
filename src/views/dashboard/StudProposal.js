@@ -17,7 +17,7 @@ import { cilPlus } from '@coreui/icons';
 import CIcon from '@coreui/icons-react';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
-const Typographyy = () => {
+const StudProposal = () => {
   // Track the forms and their submission statuses
   const [forms, setForms] = useState([
     { id: 1, submitted: false, fields: { title: '', description: '', client: '', field: '' } }
@@ -195,4 +195,4 @@ const Typographyy = () => {
   );
 };
 
-export default Typographyy;
+export default StudProposal;
