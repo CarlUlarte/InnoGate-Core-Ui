@@ -31,6 +31,18 @@ const _nav = [
   },
   {
     component: CNavItem,
+    name: 'Thesis Proposal',
+    to: '/thesisProposal',
+    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Upload Manuscript',
+    to: '/uploadManuscript',
+    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
     name: 'Proposals',
     to: '/StudProposal',
     icon: <CIcon icon={cilNoteAdd} customClassName="nav-icon" />,
