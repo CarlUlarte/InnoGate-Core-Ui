@@ -1,10 +1,13 @@
 import React from 'react'
+import uploadManuscript from './views/uploadManuscript/uploadManuscript'
 
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 const Colors = React.lazy(() => import('./views/theme/colors/Colors'))
 const Typography = React.lazy(() => import('./views/theme/typography/Typography'))
 const Schedule = React.lazy(() => import('./views/schedule/schedule'))
 const CreateAccount = React.lazy(() => import('./views/createAccount/createAccount'))
+const ThesisProposal = React.lazy(() => import('./views/thesisProposal/thesisProposal'))
+const UploadManuscript = React.lazy(() => import('./views/uploadManuscript/uploadManuscript'))
 
 // Base
 const Accordion = React.lazy(() => import('./views/base/accordion/Accordion'))
@@ -62,6 +65,8 @@ const routes = [
 
   { path: '/schedule', name: 'schedule', element: Schedule },
   { path: '/createAccount', name: 'createAccount', element: CreateAccount },
+  { path: '/thesisProposal', name: 'thesisProposal', element: ThesisProposal },
+  { path: '/uploadManuscript', name: 'uploadManuscript', element: UploadManuscript },
 
   { path: '/base', name: 'Base', element: Cards, exact: true },
   { path: '/base/accordion', name: 'Accordion', element: Accordion },

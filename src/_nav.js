@@ -29,6 +29,18 @@ const _nav = [
     to: '/createAccount',
     icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
   },
+  {
+    component: CNavItem,
+    name: 'Thesis Proposal',
+    to: '/thesisProposal',
+    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Upload Manuscript',
+    to: '/uploadManuscript',
+    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+  },
 
   {
     component: CNavTitle,
