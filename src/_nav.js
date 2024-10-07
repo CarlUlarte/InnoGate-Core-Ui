@@ -29,6 +29,12 @@ const _nav = [
     to: '/createAccount',
     icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
   },
+  {
+    component: CNavItem,
+    name: 'Proposals',
+    to: '/StudProposal',
+    icon: <CIcon icon={cilNoteAdd} customClassName="nav-icon" />,
+  },
 
   {
     component: CNavTitle,
@@ -45,12 +51,7 @@ const _nav = [
     },
   },
 
-  {
-    component: CNavItem,
-    name: 'Proposals',
-    to: '/theme/typographyy',
-    icon: <CIcon icon={cilNoteAdd} customClassName="nav-icon" />,
-  },
+
   {
     component: CNavItem,
     name: 'Colors',
