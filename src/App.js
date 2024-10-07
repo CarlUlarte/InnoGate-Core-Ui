@@ -1,7 +1,9 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { HashRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { CSpinner, useColorModes } from '@coreui/react';
 import { useSelector } from 'react-redux';
+import { auth } from './backend/firebase'; // Adjust the import according to your file structure
+import { onAuthStateChanged } from 'firebase/auth';
 import './scss/style.scss';
 
 // Containers
@@ -19,6 +21,8 @@ import PrivateRoute from './components/PrivateRoute';
 const App = () => {
   const { isColorModeSet, setColorMode } = useColorModes('coreui-free-react-admin-template-theme');
   const storedTheme = useSelector((state) => state.theme);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.href.split('?')[1]);
@@ -33,6 +37,24 @@ const App = () => {
 
     setColorMode(storedTheme);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false); // Set loading to false when auth check is complete
+    });
+
+    return () => unsubscribe(); // Clean up the subscription on unmount
+  }, []);
+
+  if (loading) {
+    // Show loading spinner while checking auth state
+    return (
+      <div className="pt-3 text-center">
+        <CSpinner color="primary" variant="grow" />
+      </div>
+    );
+  }
 
   return (
     <HashRouter>
@@ -55,9 +77,13 @@ const App = () => {
             path="*"
             name="Home"
             element={
-              <PrivateRoute>
-                <DefaultLayout />
-              </PrivateRoute>
+              user ? (
+                <PrivateRoute>
+                  <DefaultLayout />
+                </PrivateRoute>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
         </Routes>

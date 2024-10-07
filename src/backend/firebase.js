@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app' // Import initializeApp from firebase/app
-import { getFirestore } from 'firebase/firestore'
-import { getAuth } from 'firebase/auth'
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth'; // Change this line
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -11,13 +11,22 @@ const firebaseConfig = {
   messagingSenderId: '344707455909',
   appId: '1:344707455909:web:782f0865d92dd4d12fa64c',
   measurementId: 'G-RETHEZ24WR',
-}
+};
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore and Auth
-const db = getFirestore(app)
-const auth = getAuth(app)
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-export { db, auth }
+// Set the persistence for Firebase Auth to sessionPersistence
+setPersistence(auth, browserSessionPersistence) // Change this line
+  .then(() => {
+    // Existing and future Auth states are now persisted in the current session only.
+  })
+  .catch((error) => {
+    console.error("Error setting persistence: ", error);
+  });
+
+export { db, auth };
