@@ -18,7 +18,6 @@ import {
 import { setDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from 'src/backend/firebase'
-import { getFunctions, httpsCallable } from 'firebase/functions'
 
 const CreateAccount = () => {
   const [users, setUsers] = useState([])
@@ -84,7 +83,7 @@ const CreateAccount = () => {
         </div>
       </CCardHeader>
       <CCardBody>
-        <CRow className="mb-4">
+        <CRow className="mb-4 justify-content-between">
           <CCol sm={3}>
             <strong>Name</strong>
           </CCol>
@@ -94,7 +93,7 @@ const CreateAccount = () => {
           <CCol sm={3}>
             <strong>Role</strong>
           </CCol>
-          <CCol sm={3}>
+          <CCol sm={1}>
             <strong>Actions</strong>
           </CCol>
         </CRow>
@@ -102,11 +101,17 @@ const CreateAccount = () => {
           <p>No users added yet.</p>
         ) : (
           users.map((user, index) => (
-            <CRow key={index} className="mb-2">
-              <CCol sm={3}>{user.name}</CCol>
-              <CCol sm={3}>{user.email}</CCol>
-              <CCol sm={3}>{user.role}</CCol>
+            <CRow key={index} className="mb-2 justify-content-between">
               <CCol sm={3}>
+                <span className="small">{user.name}</span>
+              </CCol>
+              <CCol sm={3}>
+                <span className="small">{user.email}</span>
+              </CCol>
+              <CCol sm={3}>
+                <span className="small">{user.role}</span>
+              </CCol>
+              <CCol sm={1}>
                 <CButton size="sm" color="danger" onClick={() => handleDeleteUser(user.id)}>
                   Delete
                 </CButton>

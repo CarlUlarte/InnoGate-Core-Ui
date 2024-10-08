@@ -13,6 +13,9 @@ import {
   cilSpeedometer,
   cilStar,
   cilNoteAdd,
+  cilUser,
+  cilCalendar,
+  cilLevelUp,
 } from '@coreui/icons'
 import { CNavGroup, CNavItem, CNavTitle } from '@coreui/react'
 
@@ -21,30 +24,24 @@ const _nav = [
     component: CNavItem,
     name: 'Schedule',
     to: '/schedule',
-    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
     name: 'Create Account',
     to: '/createAccount',
-    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
-  },
-  {
-    component: CNavItem,
-    name: 'Thesis Proposal',
-    to: '/thesisProposal',
-    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    icon: <CIcon icon={cilUser} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
     name: 'Upload Manuscript',
     to: '/uploadManuscript',
-    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    icon: <CIcon icon={cilLevelUp} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
-    name: 'Proposals',
-    to: '/StudProposal',
+    name: 'Thesis Proposal',
+    to: '/thesisProposal',
     icon: <CIcon icon={cilNoteAdd} customClassName="nav-icon" />,
   },
 
@@ -62,7 +59,6 @@ const _nav = [
       text: 'NEW',
     },
   },
-
 
   {
     component: CNavItem,
