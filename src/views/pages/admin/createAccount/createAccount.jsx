@@ -14,18 +14,25 @@ import {
   CFormSelect,
   CRow,
   CCol,
+  CImage,
 } from '@coreui/react'
 import { setDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from 'src/backend/firebase'
 
-const CreateAccount = () => {
+const defaultProfilePic = 'src/assets/images/avatars/pic.png'
+
+const createAccount = () => {
   const [users, setUsers] = useState([])
   const [modalVisible, setModalVisible] = useState(false)
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('')
   const [password, setPassword] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
+  const [loading, setLoading] = useState(false) // Add a loading state
+  const [adminEmail, setAdminEmail] = useState('') // Store admin email
 
   // Fetch users from Firestore when component loads
   useEffect(() => {
@@ -39,29 +46,48 @@ const CreateAccount = () => {
   }, [])
 
   const handleAddUser = async () => {
+    setLoading(true) // Start loading before creating the user
     try {
-      // Create user with Firebase Authentication
+      // Step 1: Create the new user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
-      // Use the UID from Firebase Auth as the document ID in Firestore
+      // Step 2: Save the new user info in Firestore
       await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid, // Save UID explicitly for reference
+        uid: user.uid,
         name,
         email,
         role,
+        photoURL: defaultProfilePic, // Set default profile picture
       })
 
-      setUsers([...users, { id: user.uid, name, email, role }])
+      // Step 3: Immediately log the admin user back in
+      await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
+
+      // Update the UI after successful user creation
+      setUsers([...users, { id: user.uid, name, email, role, photoURL: defaultProfilePic }])
       setName('')
       setEmail('')
       setRole('')
       setPassword('')
       setModalVisible(false)
+      setPasswordModalVisible(false) // Close both modals
+
+      console.log(`User ${name} created successfully.`)
     } catch (error) {
-      console.error('Error adding user: ', error)
+      console.error('Error adding user: ', error.message)
+    } finally {
+      setLoading(false) // End loading after everything is done
     }
   }
+
+  const confirmAddUser = () => {
+    const currentUser = auth.currentUser
+    setAdminEmail(currentUser.email) // Save admin email
+    setPasswordModalVisible(true) // Show password modal
+    setModalVisible(false)
+  }
+
   const handleDeleteUser = async (userId) => {
     try {
       // Delete user document using UID as the document ID
@@ -84,10 +110,10 @@ const CreateAccount = () => {
       </CCardHeader>
       <CCardBody>
         <CRow className="mb-4 justify-content-between">
-          <CCol sm={3}>
-            <strong>Name</strong>
+          <CCol sm={4}>
+            <strong>Name & Profile Picture</strong>
           </CCol>
-          <CCol sm={3}>
+          <CCol sm={4}>
             <strong>Email</strong>
           </CCol>
           <CCol sm={3}>
@@ -101,11 +127,23 @@ const CreateAccount = () => {
           <p>No users added yet.</p>
         ) : (
           users.map((user, index) => (
-            <CRow key={index} className="mb-2 justify-content-between">
-              <CCol sm={3}>
+            <CRow key={index} className="mb-2 justify-content-between align-items-center">
+              <CCol sm={4} className="d-flex align-items-center">
+                <CImage
+                  src={user.photoURL || defaultProfilePic}
+                  width={40}
+                  height={40}
+                  roundedCircle
+                  alt="Profile Picture"
+                  className="me-3"
+                  style={{
+                    border: '1px solid gray',
+                    borderRadius: '20px',
+                  }}
+                />
                 <span className="small">{user.name}</span>
               </CCol>
-              <CCol sm={3}>
+              <CCol sm={4}>
                 <span className="small">{user.email}</span>
               </CCol>
               <CCol sm={3}>
@@ -121,6 +159,7 @@ const CreateAccount = () => {
         )}
       </CCardBody>
 
+      {/* Add User Modal */}
       <CModal visible={modalVisible} onClose={() => setModalVisible(false)}>
         <CModalHeader>
           <CModalTitle>Add User</CModalTitle>
@@ -166,8 +205,34 @@ const CreateAccount = () => {
           <CButton color="secondary" onClick={() => setModalVisible(false)}>
             Cancel
           </CButton>
-          <CButton color="primary" onClick={handleAddUser}>
-            Add User
+          <CButton color="primary" onClick={confirmAddUser} disabled={loading}>
+            {loading ? 'Adding...' : 'Next'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* Admin Password Confirmation Modal */}
+      <CModal visible={passwordModalVisible} onClose={() => setPasswordModalVisible(false)}>
+        <CModalHeader>
+          <CModalTitle>Admin Password Confirmation</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <CForm>
+            <CFormInput
+              type="password"
+              label="Admin Password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              required
+            />
+          </CForm>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setPasswordModalVisible(false)}>
+            Cancel
+          </CButton>
+          <CButton color="primary" onClick={handleAddUser} disabled={loading}>
+            {loading ? 'Adding...' : 'Confirm'}
           </CButton>
         </CModalFooter>
       </CModal>
@@ -175,4 +240,4 @@ const CreateAccount = () => {
   )
 }
 
-export default CreateAccount
+export default createAccount

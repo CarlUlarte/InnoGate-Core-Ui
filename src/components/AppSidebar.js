@@ -1,6 +1,6 @@
-import React from 'react'
-import { useSelector, useDispatch } from 'react-redux'
+import React, { useEffect, useState } from 'react'
 
+import { useSelector, useDispatch } from 'react-redux'
 
 import {
   CCloseButton,
@@ -16,16 +16,16 @@ import { AppSidebarNav } from './AppSidebarNav'
 
 import { logo } from 'src/assets/brand/logo'
 import { sygnet } from 'src/assets/brand/sygnet'
-import '@coreui/coreui/scss/coreui.scss';
+import '@coreui/coreui/scss/coreui.scss'
 
 // sidebar nav config
-import navigation from '../_nav'
+import _nav from '../_nav'
 
 const AppSidebar = () => {
   const dispatch = useDispatch()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
-
+  const sidebarItems = _nav()
 
   return (
     <CSidebar
@@ -49,14 +49,13 @@ const AppSidebar = () => {
           onClick={() => dispatch({ type: 'set', sidebarShow: false })}
         />
       </CSidebarHeader>
-      <AppSidebarNav items={navigation} />
+      <AppSidebarNav items={sidebarItems} />
       <CSidebarFooter className="border-top d-none d-lg-flex">
         <CSidebarToggler
           onClick={() => dispatch({ type: 'set', sidebarUnfoldable: !unfoldable })}
         />
       </CSidebarFooter>
     </CSidebar>
-    
   )
 }
 

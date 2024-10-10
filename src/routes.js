@@ -1,14 +1,17 @@
 import React from 'react'
-import uploadManuscript from './views/uploadManuscript/uploadManuscript'
 
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 const Colors = React.lazy(() => import('./views/theme/colors/Colors'))
 const Typography = React.lazy(() => import('./views/theme/typography/Typography'))
-const StudProposal = React.lazy(() => import('./views/schedule/StudProposal'))
 const Schedule = React.lazy(() => import('./views/schedule/schedule'))
-const CreateAccount = React.lazy(() => import('./views/createAccount/createAccount'))
-const ThesisProposal = React.lazy(() => import('./views/thesisProposal/thesisProposal'))
-const UploadManuscript = React.lazy(() => import('./views/uploadManuscript/uploadManuscript'))
+const CreateAccount = React.lazy(() => import('./views/pages/admin/createAccount/createAccount'))
+const ThesisProposal = React.lazy(
+  () => import('./views/pages/student/thesisProposal/thesisProposal'),
+)
+const UploadManuscript = React.lazy(
+  () => import('./views/pages/student/uploadManuscript/uploadManuscript'),
+)
+const EditProfile = React.lazy(() => import('./views/editProfile/editProfile'))
 
 // Base
 const Accordion = React.lazy(() => import('./views/base/accordion/Accordion'))
@@ -63,12 +66,12 @@ const routes = [
   { path: '/theme', name: 'Theme', element: Colors, exact: true },
   { path: '/theme/colors', name: 'Colors', element: Colors },
   { path: '/theme/typography', name: 'Typography', element: Typography },
-  { path: '/StudProposal', name: 'StudProposal', element: StudProposal },
 
   { path: '/schedule', name: 'schedule', element: Schedule },
   { path: '/createAccount', name: 'createAccount', element: CreateAccount },
   { path: '/thesisProposal', name: 'thesisProposal', element: ThesisProposal },
   { path: '/uploadManuscript', name: 'uploadManuscript', element: UploadManuscript },
+  { path: '/editProfile', name: 'editProfile', element: EditProfile },
 
   { path: '/base', name: 'Base', element: Cards, exact: true },
   { path: '/base/accordion', name: 'Accordion', element: Accordion },

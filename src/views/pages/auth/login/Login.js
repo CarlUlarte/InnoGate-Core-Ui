@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   CButton,
   CCard,
@@ -12,109 +12,79 @@ import {
   CInputGroup,
   CInputGroupText,
   CRow,
-} from '@coreui/react';
-import CIcon from '@coreui/icons-react';
-import { cilLockLocked, cilUser } from '@coreui/icons';
-import { auth, db } from 'src/backend/firebase'; // Adjust the import path as needed
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+} from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import { cilLockLocked, cilUser } from '@coreui/icons'
+import { auth, db } from 'src/backend/firebase' // Adjust the import path as needed
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     // Check if user is already logged in
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // User is signed in, you can fetch user role and navigate
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userDoc = await getDoc(doc(db, 'users', user.uid))
         if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const role = userData.role;
-          switch (role) {
-            case 'admin':
-              navigate('/admin/dashboard');
-              break;
-            case 'teacher':
-              navigate('/teacher/dashboard');
-              break;
-            case 'adviser':
-              navigate('/adviser/dashboard');
-              break;
-            case 'student':
-              navigate('/student/dashboard');
-              break;
-            default:
-              navigate('/');
-          }
+          const userData = userDoc.data()
+          const role = userData.role
+          console.log(role)
+          navigate('/')
         } else {
-          setError('User data not found.');
+          setError('User data not found.')
         }
       }
-    });
+    })
 
-    return () => unsubscribe(); // Clean up subscription on unmount
-  }, [navigate]);
+    return () => unsubscribe() // Clean up subscription on unmount
+  }, [navigate])
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError('')
 
     try {
       // Sign in the user
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
 
       // Fetch the user role from Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await getDoc(doc(db, 'users', user.uid))
       if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const role = userData.role;
+        const userData = userDoc.data()
+        const role = userData.role
 
-        // Redirect based on user role
-        switch (role) {
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-          case 'teacher':
-            navigate('/teacher/dashboard');
-            break;
-          case 'adviser':
-            navigate('/adviser/dashboard');
-            break;
-          case 'student':
-            navigate('/student/dashboard');
-            break;
-          default:
-            navigate('/');
-        }
+        navigate('/')
       } else {
-        setError('User data not found.');
+        setError('User data not found.')
       }
     } catch (error) {
-      console.error('Error logging in:', error.message);
+      console.error('Error logging in:', error.message)
       switch (error.code) {
         case 'auth/invalid-email':
-          setError('The email address is not valid.');
-          break;
+          setError('The email address is not valid.')
+          break
         case 'auth/user-not-found':
-          setError('No user found with this email.');
-          break;
+          setError('No user found with this email.')
+          break
         case 'auth/wrong-password':
-          setError('The password is incorrect.');
-          break;
+          setError('The password is incorrect.')
+          break
         case 'auth/invalid-credential':
-          setError('The credentials provided are not valid. Please try again.');
-          break;
+          setError('The credentials provided are not valid. Please try again.')
+          break
         default:
-          setError('An error occurred. Please try again.');
-          break;
+          setError('An error occurred. Please try again.')
+          break
       }
     }
-  };
+  }
 
   return (
     <div className="bg-body-tertiary min-vh-100 d-flex flex-row align-items-center justify-content-center">
@@ -176,7 +146,7 @@ const Login = () => {
         </CRow>
       </CContainer>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login
