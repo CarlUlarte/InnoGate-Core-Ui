@@ -1,25 +1,71 @@
 import React from 'react'
 import CIcon from '@coreui/icons-react'
-import { cilCalendar, cilNoteAdd, cilUser } from '@coreui/icons'
-import { CNavItem, CNavTitle } from '@coreui/react'
-import { useRole } from 'src/RoleContext' // Import the RoleContext
+import {
+  cilCalendar,
+  cilNoteAdd,
+  cilUser,
+  cilGroup,
+  cilPencil,
+  cilFolder,
+  cilUserPlus,
+  cilVoiceOverRecord,
+  cilFile,
+  cilSpreadsheet,
+  cilPlus,
+} from '@coreui/icons'
+import { CNavItem } from '@coreui/react'
+import { useRole } from 'src/RoleContext'
 
 const _nav = () => {
-  const role = useRole() // Get the user's role
-  console.log(`Current Role in Nav: ${role}`) // Log the current role
+  const role = useRole()
 
-  const generalItems = [
+  const scheduleItem = {
+    component: CNavItem,
+    name: 'Schedule',
+    to: '/schedule',
+    icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+  }
+
+  const editProfileItem = {
+    component: CNavItem,
+    name: 'Edit Profile',
+    to: '/editProfile',
+    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+  }
+
+  const adviserItems = [
     {
       component: CNavItem,
-      name: 'Schedule',
-      to: '/schedule',
-      icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+      name: 'Group Request',
+      to: '/groupRequest',
+      icon: <CIcon icon={cilVoiceOverRecord} customClassName="nav-icon" />,
     },
     {
       component: CNavItem,
-      name: 'Edit Profile',
-      to: '/editProfile',
-      icon: <CIcon icon={cilUser} customClassName="nav-icon" />,
+      name: 'View Manuscript',
+      to: '/viewManuscript',
+      icon: <CIcon icon={cilFile} customClassName="nav-icon" />,
+    },
+    {
+      component: CNavItem,
+      name: 'Manage Group',
+      to: '/manageGroup',
+      icon: <CIcon icon={cilSpreadsheet} customClassName="nav-icon" />,
+    },
+  ]
+
+  const teacherItems = [
+    {
+      component: CNavItem,
+      name: 'My Students',
+      to: '/myStudents',
+      icon: <CIcon icon={cilGroup} customClassName="nav-icon" />,
+    },
+    {
+      component: CNavItem,
+      name: 'Proposal Management',
+      to: '/proposalManagement',
+      icon: <CIcon icon={cilFolder} customClassName="nav-icon" />,
     },
   ]
 
@@ -34,7 +80,7 @@ const _nav = () => {
       component: CNavItem,
       name: 'Upload Manuscript',
       to: '/uploadManuscript',
-      icon: <CIcon icon={cilNoteAdd} customClassName="nav-icon" />,
+      icon: <CIcon icon={cilPlus} customClassName="nav-icon" />,
     },
   ]
 
@@ -43,18 +89,19 @@ const _nav = () => {
       component: CNavItem,
       name: 'Create Account',
       to: '/createAccount',
-      icon: <CIcon icon={cilUser} customClassName="nav-icon" />,
+      icon: <CIcon icon={cilUserPlus} customClassName="nav-icon" />,
     },
   ]
 
-  // Combine role-specific items with general items
-  let roleBasedItems = [...generalItems]
+  // Prepare the role-based items array
+  let roleBasedItems = []
   if (role === 'Student') roleBasedItems = [...roleBasedItems, ...studentItems]
-  // if (role === 'Teacher') roleBasedItems = [...roleBasedItems, ...teacherItems]
-  // if (role === 'Adviser') roleBasedItems = [...roleBasedItems, ...adviserItems]
+  if (role === 'Teacher') roleBasedItems = [...roleBasedItems, ...teacherItems]
+  if (role === 'Adviser') roleBasedItems = [...roleBasedItems, ...adviserItems]
   if (role === 'Admin') roleBasedItems = [...roleBasedItems, ...adminItems]
 
-  return roleBasedItems
+  // Return the final array with Schedule at the top and Edit Profile at the bottom
+  return [scheduleItem, ...roleBasedItems, editProfileItem]
 }
 
 export default _nav

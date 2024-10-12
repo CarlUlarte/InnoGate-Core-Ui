@@ -12,6 +12,15 @@ const UploadManuscript = React.lazy(
   () => import('./views/pages/student/uploadManuscript/uploadManuscript'),
 )
 const EditProfile = React.lazy(() => import('./views/editProfile/editProfile'))
+const GroupRequest = React.lazy(() => import('./views/pages/adviser/groupRequest/groupRequest'))
+const ManageGroup = React.lazy(() => import('./views/pages/adviser/manageGroup/manageGroup'))
+const ViewManuscript = React.lazy(
+  () => import('./views/pages/adviser/viewManuscript/viewManuscript'),
+)
+const ProposalManagement = React.lazy(
+  () => import('./views/pages/teacher/proposalManagement/proposalManagement'),
+)
+const MyStudents = React.lazy(() => import('./views/pages/teacher/myStudents/myStudents'))
 
 // Base
 const Accordion = React.lazy(() => import('./views/base/accordion/Accordion'))
@@ -72,6 +81,11 @@ const routes = [
   { path: '/thesisProposal', name: 'thesisProposal', element: ThesisProposal },
   { path: '/uploadManuscript', name: 'uploadManuscript', element: UploadManuscript },
   { path: '/editProfile', name: 'editProfile', element: EditProfile },
+  { path: '/groupRequest', name: 'groupRequest', element: GroupRequest },
+  { path: '/manageGroup', name: 'manageGroup', element: ManageGroup },
+  { path: '/viewManuscript', name: 'viewManuscript', element: ViewManuscript },
+  { path: '/myStudents', name: 'myStudents', element: MyStudents },
+  { path: '/proposalManagement', name: 'proposalManagement', element: ProposalManagement },
 
   { path: '/base', name: 'Base', element: Cards, exact: true },
   { path: '/base/accordion', name: 'Accordion', element: Accordion },

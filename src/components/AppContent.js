@@ -23,7 +23,7 @@ const AppContent = () => {
               )
             )
           })}
-          <Route path="/" element={<Navigate to="/" replace />} />
+          <Route path="/" element={<Navigate to="/schedule" replace />} />
         </Routes>
       </Suspense>
     </CContainer>

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   CAvatar,
   CBadge,
@@ -15,33 +15,53 @@ import {
   cilCommentSquare,
   cilEnvelopeOpen,
   cilFile,
-  cilLockLocked,
-  cilSettings,
   cilTask,
   cilUser,
   cilAccountLogout,
+  cilSettings,
 } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
-import { auth } from 'src/backend/firebase'
-import avatar8 from './../../assets/images/avatars/8.jpg'
+import { auth, db } from 'src/backend/firebase'
+import { doc, getDoc } from 'firebase/firestore'
+const defaultProfilePic = 'src/assets/images/avatars/pic.png'
 
 const AppHeaderDropdown = () => {
-  const navigate = useNavigate() // Use useNavigate hook from react-router-dom
+  const [photoURL, setPhotoURL] = useState(defaultProfilePic) // Use default avatar initially
+  const navigate = useNavigate()
+
+  // Fetch the profile picture from Firestore
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const currentUser = auth.currentUser
+      if (currentUser) {
+        // Get user document from Firestore
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
+        if (userDoc.exists()) {
+          const userData = userDoc.data()
+          setPhotoURL(userData.photoURL || defaultProfilePic) // Use uploaded photo or default
+        }
+      }
+    }
+
+    fetchUserProfile()
+  }, [])
 
   const handleLogout = async () => {
     try {
-      await signOut(auth) // Sign out the user using Firebase's signOut method
-      navigate('/login') // Navigate to the login page or other route after logout
+      await signOut(auth)
+      navigate('/login')
     } catch (error) {
       console.error('Error signing out:', error.message)
     }
   }
+
   return (
     <CDropdown variant="nav-item">
       <CDropdownToggle placement="bottom-end" className="py-0 pe-0" caret={false}>
-        <CAvatar src={avatar8} size="md" />
+        {/* Display the fetched or default profile picture */}
+        <CAvatar src={photoURL} size="md" />
       </CDropdownToggle>
       <CDropdownMenu className="pt-0" placement="bottom-end">
         <CDropdownHeader className="bg-body-secondary fw-semibold mb-2">Account</CDropdownHeader>
