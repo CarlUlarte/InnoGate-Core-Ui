@@ -5,13 +5,18 @@ import { CContainer, CSpinner } from '@coreui/react'
 // routes config
 import routes from '../routes'
 
-const AppContent = () => {
+const AppContent = ({ role }) => {
+  // Safely filter routes based on user role
+  const filteredRoutes = routes.filter(
+    (route) => Array.isArray(route.allowedRoles) && role && route.allowedRoles.includes(role),
+  )
+
   return (
     <CContainer className="px-4" lg>
       <Suspense fallback={<CSpinner color="primary" />}>
         <Routes>
-          {routes.map((route, idx) => {
-            return (
+          {filteredRoutes.map(
+            (route, idx) =>
               route.element && (
                 <Route
                   key={idx}
@@ -20,9 +25,8 @@ const AppContent = () => {
                   name={route.name}
                   element={<route.element />}
                 />
-              )
-            )
-          })}
+              ),
+          )}
           <Route path="/" element={<Navigate to="/schedule" replace />} />
         </Routes>
       </Suspense>

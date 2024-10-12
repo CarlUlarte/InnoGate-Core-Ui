@@ -19,21 +19,13 @@ import { useRole } from 'src/RoleContext'
 const _nav = () => {
   const role = useRole()
 
-  const scheduleItem = {
-    component: CNavItem,
-    name: 'Schedule',
-    to: '/schedule',
-    icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
-  }
-
-  const editProfileItem = {
-    component: CNavItem,
-    name: 'Edit Profile',
-    to: '/editProfile',
-    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
-  }
-
   const adviserItems = [
+    {
+      component: CNavItem,
+      name: 'Schedule',
+      to: '/scheduleAdviser',
+      icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+    },
     {
       component: CNavItem,
       name: 'Group Request',
@@ -52,9 +44,21 @@ const _nav = () => {
       to: '/manageGroup',
       icon: <CIcon icon={cilSpreadsheet} customClassName="nav-icon" />,
     },
+    {
+      component: CNavItem,
+      name: 'Edit Profile',
+      to: '/editProfileAdviser',
+      icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    },
   ]
 
   const teacherItems = [
+    {
+      component: CNavItem,
+      name: 'Schedule',
+      to: '/scheduleTeacher',
+      icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+    },
     {
       component: CNavItem,
       name: 'My Students',
@@ -67,9 +71,21 @@ const _nav = () => {
       to: '/proposalManagement',
       icon: <CIcon icon={cilFolder} customClassName="nav-icon" />,
     },
+    {
+      component: CNavItem,
+      name: 'Edit Profile',
+      to: '/editProfileTeacher',
+      icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    },
   ]
 
   const studentItems = [
+    {
+      component: CNavItem,
+      name: 'Schedule',
+      to: '/scheduleStudent',
+      icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+    },
     {
       component: CNavItem,
       name: 'Thesis Proposal',
@@ -88,26 +104,42 @@ const _nav = () => {
       to: '/groupDetails',
       icon: <CIcon icon={cilGroup} customClassName="nav-icon" />,
     },
+    {
+      component: CNavItem,
+      name: 'Edit Profile',
+      to: '/editProfileStudent',
+      icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    },
   ]
 
   const adminItems = [
+    {
+      component: CNavItem,
+      name: 'Schedule',
+      to: '/scheduleAdmin',
+      icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+    },
     {
       component: CNavItem,
       name: 'Create Account',
       to: '/createAccount',
       icon: <CIcon icon={cilUserPlus} customClassName="nav-icon" />,
     },
+    {
+      component: CNavItem,
+      name: 'Edit Profile',
+      to: '/editProfileAdmin',
+      icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    },
   ]
 
-  // Prepare the role-based items array
   let roleBasedItems = []
-  if (role === 'Student') roleBasedItems = [...roleBasedItems, ...studentItems]
-  if (role === 'Teacher') roleBasedItems = [...roleBasedItems, ...teacherItems]
-  if (role === 'Adviser') roleBasedItems = [...roleBasedItems, ...adviserItems]
-  if (role === 'Admin') roleBasedItems = [...roleBasedItems, ...adminItems]
+  if (role === 'Student') roleBasedItems = [...studentItems]
+  if (role === 'Teacher') roleBasedItems = [...teacherItems]
+  if (role === 'Adviser') roleBasedItems = [...adviserItems]
+  if (role === 'Admin') roleBasedItems = [...adminItems]
 
-  // Return the final array with Schedule at the top and Edit Profile at the bottom
-  return [scheduleItem, ...roleBasedItems, editProfileItem]
+  return roleBasedItems
 }
 
 export default _nav
