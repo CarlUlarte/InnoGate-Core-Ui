@@ -131,46 +131,48 @@ const EditProfile = () => {
 
   return (
     <CRow>
-      <CCol md={6}>
-        <CCard style={{ height: '250px', width: '100%' }}>
+      <CCol md={6} className="mb-3">
+        <CCard style={{ width: '100%' }}>
           <CCardHeader className="text-center">
             <h5>Change Profile Picture</h5>
           </CCardHeader>
-          <CCardBody className="d-flex align-items-center">
-            <div className="d-flex flex-column align-items-center" style={{ width: '40%' }}>
-              <CImage
-                src={isPreviewing ? previewURL : photoURL}
-                width={150}
-                height={150}
-                alt="Profile Picture"
-                style={{
-                  border: '3px solid gray',
-                  borderRadius: '10px',
-                  boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)',
-                  marginBottom: '10px',
-                }}
-              />
-            </div>
-            <div className="d-flex flex-column align-items-left" style={{ width: '60%' }}>
-              <CFormInput
-                type="file"
-                id="formFile"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                style={{ marginBottom: '10px' }}
-              />
-              {isPreviewing && (
-                <CButton color="primary" onClick={confirmPhotoChange}>
-                  Confirm Change
-                </CButton>
-              )}
-              {photoLoading && <CSpinner color="primary" />}
-            </div>
+          <CCardBody className="d-flex flex-column align-items-center">
+            <CRow className="w-100">
+              <CCol xs={12} md={5} className="d-flex justify-content-center">
+                <CImage
+                  src={isPreviewing ? previewURL : photoURL}
+                  width={150}
+                  height={150}
+                  alt="Profile Picture"
+                  style={{
+                    border: '3px solid gray',
+                    borderRadius: '10px',
+                    boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)',
+                    marginBottom: '10px',
+                  }}
+                />
+              </CCol>
+              <CCol xs={12} md={7} className="d-flex flex-column align-items-start">
+                <CFormInput
+                  type="file"
+                  id="formFile"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  style={{ marginBottom: '10px' }}
+                />
+                {isPreviewing && (
+                  <CButton color="primary" onClick={confirmPhotoChange}>
+                    Confirm Change
+                  </CButton>
+                )}
+                {photoLoading && <CSpinner color="primary" />}
+              </CCol>
+            </CRow>
           </CCardBody>
         </CCard>
       </CCol>
 
-      <CCol md={6}>
+      <CCol md={6} className="mb-3">
         <CCard style={{ height: '250px', width: '100%' }}>
           <CCardHeader>
             <h5>Name and Email</h5>
@@ -189,7 +191,7 @@ const EditProfile = () => {
       </CCol>
 
       <CCol md={12}>
-        <CCard className="mt-3 mb-3">
+        <CCard className="mb-3">
           <CCardHeader>
             <h5>Change Password</h5>
           </CCardHeader>

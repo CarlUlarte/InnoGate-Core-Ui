@@ -8,6 +8,8 @@ const CreateAccount = React.lazy(() => import('./views/pages/admin/createAccount
 const ThesisProposal = React.lazy(
   () => import('./views/pages/student/thesisProposal/thesisProposal'),
 )
+const GroupDetails = React.lazy(() => import('./views/pages/student/groupDetails/groupDetails'))
+
 const UploadManuscript = React.lazy(
   () => import('./views/pages/student/uploadManuscript/uploadManuscript'),
 )
@@ -82,6 +84,8 @@ const routes = [
   { path: '/uploadManuscript', name: 'uploadManuscript', element: UploadManuscript },
   { path: '/editProfile', name: 'editProfile', element: EditProfile },
   { path: '/groupRequest', name: 'groupRequest', element: GroupRequest },
+  { path: '/groupDetails', name: 'groupDetails', element: GroupDetails },
+
   { path: '/manageGroup', name: 'manageGroup', element: ManageGroup },
   { path: '/viewManuscript', name: 'viewManuscript', element: ViewManuscript },
   { path: '/myStudents', name: 'myStudents', element: MyStudents },

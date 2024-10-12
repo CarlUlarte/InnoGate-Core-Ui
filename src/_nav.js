@@ -82,6 +82,12 @@ const _nav = () => {
       to: '/uploadManuscript',
       icon: <CIcon icon={cilPlus} customClassName="nav-icon" />,
     },
+    {
+      component: CNavItem,
+      name: 'Group Details',
+      to: '/groupDetails',
+      icon: <CIcon icon={cilGroup} customClassName="nav-icon" />,
+    },
   ]
 
   const adminItems = [
