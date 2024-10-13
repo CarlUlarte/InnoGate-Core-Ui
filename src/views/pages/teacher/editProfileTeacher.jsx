@@ -16,6 +16,7 @@ import { updateDoc, doc, getDoc } from 'firebase/firestore'
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'
 import { db, auth, storage } from 'src/backend/firebase'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
+import CustomToast from 'src/components/Toast/CustomToast'
 
 const defaultProfilePic = 'src/assets/images/avatars/pic.png'
 
@@ -29,6 +30,7 @@ const EditProfile = () => {
   const [photoLoading, setPhotoLoading] = useState(false)
   const [previewURL, setPreviewURL] = useState('')
   const [isPreviewing, setIsPreviewing] = useState(false)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -59,13 +61,19 @@ const EditProfile = () => {
 
   const confirmPhotoChange = async () => {
     if (!previewURL) {
-      alert('Please select a valid image before confirming.')
+      setToast({
+        color: 'danger',
+        message: 'Please select a valid image before confirming.',
+      })
       return
     }
 
     const newPhoto = document.getElementById('formFile').files[0] // Directly get the file from the input
     if (!newPhoto) {
-      alert('No photo selected.')
+      setToast({
+        color: 'danger',
+        message: 'No photo selected.',
+      })
       return
     }
 
@@ -85,7 +93,10 @@ const EditProfile = () => {
       },
       (error) => {
         console.error('Error uploading file:', error)
-        alert('Failed to upload profile picture.')
+        setToast({
+          color: 'danger',
+          message: 'Failed to upload profile picture.',
+        })
         setPhotoLoading(false)
       },
       async () => {
@@ -96,7 +107,10 @@ const EditProfile = () => {
         // Update the state to display the new photo URL
         setPhotoURL(downloadURL)
         setPhotoLoading(false)
-        alert('Profile picture updated successfully!')
+        setToast({
+          color: 'success',
+          message: 'Profile picture updated successfully!',
+        })
         setIsPreviewing(false)
         setPreviewURL('')
       },
@@ -114,31 +128,40 @@ const EditProfile = () => {
 
       // Check if new passwords match
       if (newPassword !== confirmPassword) {
-        alert('New passwords do not match.')
+        setToast({
+          color: 'danger',
+          message: 'New passwords do not match.',
+        })
         return
       }
 
       await updatePassword(currentUser, newPassword)
-      alert('Password updated successfully!')
+      setToast({
+        color: 'success',
+        message: 'Password updated successfully!',
+      })
       setNewPassword('')
       setCurrentPassword('')
       setConfirmPassword('')
     } catch (error) {
       console.error('Error updating password:', error.message)
-      alert('Failed to update password.')
+      setToast({
+        color: 'danger',
+        message: 'Failed to update password.',
+      })
     }
   }
 
   return (
     <CRow>
       <CCol md={6} className="mb-3">
-        <CCard style={{ width: '100%' }}>
+        <CCard style={{ minHeight: '253px', width: '100%' }}>
           <CCardHeader className="text-center">
             <h5>Change Profile Picture</h5>
           </CCardHeader>
           <CCardBody className="d-flex flex-column align-items-center">
             <CRow className="w-100">
-              <CCol xs={12} md={5} className="d-flex justify-content-center">
+              <CCol xs={12} md={5} className="d-flex justify-content-center mb-3 mb-md-0">
                 <CImage
                   src={isPreviewing ? previewURL : photoURL}
                   width={150}
@@ -148,7 +171,6 @@ const EditProfile = () => {
                     border: '3px solid gray',
                     borderRadius: '10px',
                     boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)',
-                    marginBottom: '10px',
                   }}
                 />
               </CCol>
@@ -158,10 +180,10 @@ const EditProfile = () => {
                   id="formFile"
                   accept="image/*"
                   onChange={handlePhotoChange}
-                  style={{ marginBottom: '10px' }}
+                  className="mb-3" // Use Bootstrap class for margin
                 />
                 {isPreviewing && (
-                  <CButton color="primary" onClick={confirmPhotoChange}>
+                  <CButton color="primary" onClick={confirmPhotoChange} className="mb-3">
                     Confirm Change
                   </CButton>
                 )}
@@ -171,9 +193,8 @@ const EditProfile = () => {
           </CCardBody>
         </CCard>
       </CCol>
-
       <CCol md={6} className="mb-3">
-        <CCard style={{ height: '250px', width: '100%' }}>
+        <CCard style={{ minHeight: '250px', width: '100%' }}>
           <CCardHeader>
             <h5>Name and Email</h5>
           </CCardHeader>
@@ -189,7 +210,6 @@ const EditProfile = () => {
           </CCardBody>
         </CCard>
       </CCol>
-
       <CCol md={12}>
         <CCard className="mb-3">
           <CCardHeader>
@@ -231,6 +251,7 @@ const EditProfile = () => {
           </CCardBody>
         </CCard>
       </CCol>
+      <CustomToast toast={toast} setToast={setToast} /> {/* Added CustomToast */}
     </CRow>
   )
 }
