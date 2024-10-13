@@ -63,6 +63,7 @@ const CreateAccount = () => {
         email,
         role,
         photoURL: defaultProfilePic,
+        ...(role === 'Student' && { groupID: '' }) // Add groupID if role is Student
       })
 
       // Step 4: Update local user state and UI
