@@ -15,6 +15,11 @@ import {
   CRow,
   CCol,
   CImage,
+  CToaster,
+  CToast,
+  CToastBody,
+  CToastClose,
+  CToastHeader,
 } from '@coreui/react'
 import { setDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
@@ -22,7 +27,7 @@ import { db, auth } from 'src/backend/firebase'
 
 const defaultProfilePic = 'src/assets/images/avatars/pic.png'
 
-const createAccount = () => {
+const CreateAccount = () => {
   const [users, setUsers] = useState([])
   const [modalVisible, setModalVisible] = useState(false)
   const [passwordModalVisible, setPasswordModalVisible] = useState(false)
@@ -31,10 +36,10 @@ const createAccount = () => {
   const [role, setRole] = useState('')
   const [password, setPassword] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
-  const [loading, setLoading] = useState(false) // Add a loading state
-  const [adminEmail, setAdminEmail] = useState('') // Store admin email
+  const [loading, setLoading] = useState(false)
+  const [adminEmail, setAdminEmail] = useState('')
+  const [toast, setToast] = useState(null)
 
-  // Fetch users from Firestore when component loads
   useEffect(() => {
     const fetchUsers = async () => {
       const querySnapshot = await getDocs(collection(db, 'users'))
@@ -46,55 +51,77 @@ const createAccount = () => {
   }, [])
 
   const handleAddUser = async () => {
-    setLoading(true) // Start loading before creating the user
+    setLoading(true)
     try {
       // Step 1: Create the new user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
-      // Step 2: Save the new user info in Firestore
+      // Step 3: Re-sign in as the admin user (wait for completion)
+      await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
+
+      // Step 2: Save the new user's information in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         name,
         email,
         role,
-        photoURL: defaultProfilePic, // Set default profile picture
+        photoURL: defaultProfilePic,
       })
 
-      // Step 3: Immediately log the admin user back in
-      await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
-
-      // Update the UI after successful user creation
+      // Step 4: Update local user state and UI
       setUsers([...users, { id: user.uid, name, email, role, photoURL: defaultProfilePic }])
       setName('')
       setEmail('')
       setRole('')
       setPassword('')
       setModalVisible(false)
-      setPasswordModalVisible(false) // Close both modals
+      setPasswordModalVisible(false)
 
-      console.log(`User ${name} created successfully.`)
+      // Step 5: Show success toast notification
+      setToast({
+        color: 'success',
+        message: `User ${name} created successfully!`,
+      })
     } catch (error) {
       console.error('Error adding user: ', error.message)
+
+      // Show error toast notification
+      setToast({
+        color: 'danger',
+        message: `Error: ${error.message}`,
+      })
     } finally {
-      setLoading(false) // End loading after everything is done
+      // Ensure that the loading state is turned off after the operation
+      setLoading(false)
     }
   }
 
   const confirmAddUser = () => {
     const currentUser = auth.currentUser
-    setAdminEmail(currentUser.email) // Save admin email
-    setPasswordModalVisible(true) // Show password modal
+    setAdminEmail(currentUser.email)
+    setPasswordModalVisible(true)
     setModalVisible(false)
   }
 
   const handleDeleteUser = async (userId) => {
     try {
-      // Delete user document using UID as the document ID
       await deleteDoc(doc(db, 'users', userId))
       setUsers(users.filter((user) => user.id !== userId))
+
+      // Show delete success toast
+      setToast({
+        color: 'warning',
+        message: 'User deleted successfully!',
+      })
     } catch (error) {
       console.error('Error deleting user:', error)
+
+      // Show error toast
+      setToast({
+        color: 'danger',
+        message: `Error: ${error.message}`,
+      })
     }
   }
 
@@ -236,8 +263,36 @@ const createAccount = () => {
           </CButton>
         </CModalFooter>
       </CModal>
+
+      {toast && (
+        <CToaster placement="top-center" className="mt-3">
+          <CToast autohide={true} visible={true} onClose={() => setToast(null)} delay={1500}>
+            <CToastHeader closeButton>
+              <svg
+                className="rounded me-2"
+                width="20"
+                height="20"
+                xmlns="http://www.w3.org/2000/svg"
+                preserveAspectRatio="xMidYMid slice"
+                focusable="false"
+                role="img"
+              >
+                <rect
+                  width="100%"
+                  height="100%"
+                  fill={toast.color === 'danger' ? 'red' : 'green'}
+                ></rect>
+              </svg>
+              <div className="fw-bold me-auto">
+                {toast.color === 'success' || toast.color === 'warning' ? 'Success!' : 'Error'}
+              </div>
+            </CToastHeader>
+            <CToastBody>{toast.message}</CToastBody>
+          </CToast>
+        </CToaster>
+      )}
     </CCard>
   )
 }
 
-export default createAccount
+export default CreateAccount

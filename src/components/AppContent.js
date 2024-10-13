@@ -27,7 +27,8 @@ const AppContent = ({ role }) => {
                 />
               ),
           )}
-          <Route path="/" element={<Navigate to="/schedule" replace />} />
+
+          <Route path="/" element={<Navigate to={`/schedule${role}`} replace />} />
         </Routes>
       </Suspense>
     </CContainer>

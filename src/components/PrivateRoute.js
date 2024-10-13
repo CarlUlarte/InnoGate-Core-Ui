@@ -4,18 +4,18 @@ import { auth } from 'src/backend/firebase'
 import { useRole } from 'src/RoleContext'
 
 const roleBasedRoutes = {
-  '/scheduleAdviser': ['Adviser'],
+  '/scheduleAdviser': ['Adviser', 'Admin'],
   '/groupRequest': ['Adviser'],
   '/viewManuscript': ['Adviser'],
   '/manageGroup': ['Adviser'],
   '/editProfileAdviser': ['Adviser'],
 
-  '/scheduleTeacher': ['Teacher'],
+  '/scheduleTeacher': ['Teacher', 'Admin'],
   '/myStudents': ['Teacher'],
   '/proposalManagement': ['Teacher'],
   '/editProfileTeacher': ['Teacher'],
 
-  '/scheduleStudent': ['Student'],
+  '/scheduleStudent': ['Student', 'Admin'],
   '/thesisProposal': ['Student'],
   '/uploadManuscript': ['Student'],
   '/groupDetails': ['Student'],
