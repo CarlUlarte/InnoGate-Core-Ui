@@ -15,6 +15,12 @@ import {
   CRow,
   CCol,
   CImage,
+  CTable,
+  CTableBody,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
+  CTableDataCell,
 } from '@coreui/react'
 import { setDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
@@ -67,18 +73,15 @@ const CreateAccount = () => {
   const handleAddUser = async () => {
     setLoading(true)
     try {
-      // Step 1: Create the new user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
-      // Step 3: Re-sign in as the admin user (wait for completion)
       await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
 
       // Generate next IDs
       let newTeacherID = maxTeacherID + 1
       let newAdviserID = maxAdviserID + 1
 
-      // Step 2: Save the new user's information in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         name,
@@ -87,14 +90,13 @@ const CreateAccount = () => {
         photoURL: defaultProfilePic,
         ...(role === 'Adviser' && { adviserID: newAdviserID.toString() }), // Assign new adviserID
         ...(role === 'Teacher' && { teacherID: newTeacherID.toString() }), // Assign new teacherID
-        ...(role === 'Student' && { 
+        ...(role === 'Student' && {
           groupID: '', // Placeholder for group ID, if grouping is used
           myTeacher: '', // Placeholder, can be updated later
-          myAdviser: '' // Placeholder, can be updated later
+          myAdviser: '', // Placeholder, can be updated later
         }),
       })
 
-      // Step 4: Update local user state and UI
       setUsers([...users, { id: user.uid, name, email, role, photoURL: defaultProfilePic }])
       setName('')
       setEmail('')
@@ -110,7 +112,13 @@ const CreateAccount = () => {
         setMaxAdviserID(newAdviserID)
       }
 
-      // Step 5: Show success toast notification
+      // Increment maxTeacherID or maxAdviserID if applicable
+      if (role === 'Teacher') {
+        setMaxTeacherID(newTeacherID)
+      } else if (role === 'Adviser') {
+        setMaxAdviserID(newAdviserID)
+      }
+
       setToast({
         color: 'success',
         message: `User ${name} created successfully!`,
@@ -118,7 +126,6 @@ const CreateAccount = () => {
     } catch (error) {
       console.error('Error adding user: ', error.message)
 
-      // Show error toast notification
       setToast({
         color: 'danger',
         message: `Error: ${error.message}`,
@@ -140,7 +147,6 @@ const CreateAccount = () => {
       await deleteDoc(doc(db, 'users', userId))
       setUsers(users.filter((user) => user.id !== userId))
 
-      // Show delete success toast
       setToast({
         color: 'warning',
         message: 'User deleted successfully!',
@@ -148,7 +154,6 @@ const CreateAccount = () => {
     } catch (error) {
       console.error('Error deleting user:', error)
 
-      // Show error toast
       setToast({
         color: 'danger',
         message: `Error: ${error.message}`,
@@ -157,7 +162,7 @@ const CreateAccount = () => {
   }
 
   return (
-    <CCard>
+    <CCard className="mb-3">
       <CCardHeader>
         <div className="d-flex justify-content-between align-items-center">
           <h5>Users</h5>
@@ -167,54 +172,56 @@ const CreateAccount = () => {
         </div>
       </CCardHeader>
       <CCardBody>
-        <CRow className="mb-4 justify-content-between">
-          <CCol sm={4}>
-            <strong>Name & Profile Picture</strong>
-          </CCol>
-          <CCol sm={4}>
-            <strong>Email</strong>
-          </CCol>
-          <CCol sm={3}>
-            <strong>Role</strong>
-          </CCol>
-          <CCol sm={1}>
-            <strong>Actions</strong>
-          </CCol>
-        </CRow>
-        {users.length === 0 ? (
-          <p>No users added yet.</p>
-        ) : (
-          users.map((user, index) => (
-            <CRow key={index} className="mb-2 justify-content-between align-items-center">
-              <CCol sm={4} className="d-flex align-items-center">
-                <CImage
-                  src={user.photoURL || defaultProfilePic}
-                  width={40}
-                  height={40}
-                  roundedCircle
-                  alt="Profile Picture"
-                  className="me-3"
-                  style={{
-                    border: '1px solid gray',
-                    borderRadius: '20px',
-                  }}
-                />
-                <span className="small">{user.name}</span>
-              </CCol>
-              <CCol sm={4}>
-                <span className="small">{user.email}</span>
-              </CCol>
-              <CCol sm={3}>
-                <span className="small">{user.role}</span>
-              </CCol>
-              <CCol sm={1}>
-                <CButton size="sm" color="danger" onClick={() => handleDeleteUser(user.id)}>
-                  Delete
-                </CButton>
-              </CCol>
-            </CRow>
-          ))
-        )}
+        <CTable hover responsive>
+          <CTableHead>
+            <CTableRow>
+              <CTableHeaderCell>Name</CTableHeaderCell>
+              <CTableHeaderCell>Email</CTableHeaderCell>
+              <CTableHeaderCell>Role</CTableHeaderCell>
+              <CTableHeaderCell>Actions</CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+          <CTableBody>
+            {users.length === 0 ? (
+              <CTableRow>
+                <CTableDataCell colSpan={4} className="text-center">
+                  No users added yet.
+                </CTableDataCell>
+              </CTableRow>
+            ) : (
+              users.map((user, index) => (
+                <CTableRow key={index}>
+                  <CTableDataCell className="d-flex align-items-center">
+                    <CImage
+                      src={user.photoURL || defaultProfilePic}
+                      width={40}
+                      height={40}
+                      roundedCircle
+                      alt="Profile Picture"
+                      className="me-3"
+                      style={{
+                        border: '1px solid gray',
+                        borderRadius: '20px',
+                      }}
+                    />
+                    <span className="small">{user.name}</span>
+                  </CTableDataCell>
+                  <CTableDataCell>
+                    <span className="small">{user.email}</span>
+                  </CTableDataCell>
+                  <CTableDataCell>
+                    <span className="small">{user.role}</span>
+                  </CTableDataCell>
+                  <CTableDataCell>
+                    <CButton size="sm" color="danger" onClick={() => handleDeleteUser(user.id)}>
+                      Delete
+                    </CButton>
+                  </CTableDataCell>
+                </CTableRow>
+              ))
+            )}
+          </CTableBody>
+        </CTable>
       </CCardBody>
 
       {/* Add User Modal */}
@@ -295,7 +302,6 @@ const CreateAccount = () => {
         </CModalFooter>
       </CModal>
 
-      {/* Custom Toast Notification */}
       <CustomToast toast={toast} setToast={setToast} />
     </CCard>
   )
