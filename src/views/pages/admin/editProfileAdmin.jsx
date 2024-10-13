@@ -27,7 +27,9 @@ const EditProfile = () => {
   const [newPassword, setNewPassword] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   const [photoLoading, setPhotoLoading] = useState(false)
+
   const [previewURL, setPreviewURL] = useState('')
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [toast, setToast] = useState(null)
@@ -57,6 +59,12 @@ const EditProfile = () => {
       setPreviewURL(URL.createObjectURL(newPhoto)) // Preview the selected image
       setIsPreviewing(true)
     }
+  }
+
+  const cancelPhotoChange = () => {
+    setIsPreviewing(false)
+    setPreviewURL('')
+    document.getElementById('formFile').value = '' // Reset file input
   }
 
   const confirmPhotoChange = async () => {
@@ -119,6 +127,8 @@ const EditProfile = () => {
 
   // Function to update the user's password
   const handlePasswordChange = async () => {
+    setLoading(true)
+
     try {
       const currentUser = auth.currentUser
       const credential = EmailAuthProvider.credential(currentUser.email, currentPassword)
@@ -144,11 +154,12 @@ const EditProfile = () => {
       setCurrentPassword('')
       setConfirmPassword('')
     } catch (error) {
-      console.error('Error updating password:', error.message)
       setToast({
         color: 'danger',
         message: 'Failed to update password.',
       })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -180,14 +191,29 @@ const EditProfile = () => {
                   id="formFile"
                   accept="image/*"
                   onChange={handlePhotoChange}
-                  className="mb-3" // Use Bootstrap class for margin
+                  className="mb-3"
                 />
                 {isPreviewing && (
-                  <CButton color="primary" onClick={confirmPhotoChange} className="mb-3">
-                    Confirm Change
-                  </CButton>
+                  <>
+                    <CButton
+                      color="primary"
+                      onClick={confirmPhotoChange}
+                      className="mb-3 w-100"
+                      disabled={photoLoading}
+                    >
+                      {photoLoading ? (
+                        <>
+                          <CSpinner size="sm" /> Confirm
+                        </>
+                      ) : (
+                        'Confirm'
+                      )}
+                    </CButton>
+                    <CButton color="secondary" onClick={cancelPhotoChange} className="w-100">
+                      Cancel
+                    </CButton>
+                  </>
                 )}
-                {photoLoading && <CSpinner color="primary" />}
               </CCol>
             </CRow>
           </CCardBody>
@@ -244,8 +270,14 @@ const EditProfile = () => {
                   required
                 />
               </div>
-              <CButton color="primary" onClick={handlePasswordChange}>
-                Update Password
+              <CButton color="primary" onClick={handlePasswordChange} disabled={loading}>
+                {loading ? (
+                  <>
+                    <CSpinner size="sm" /> Update Password
+                  </>
+                ) : (
+                  'Update Password'
+                )}
               </CButton>
             </CForm>
           </CCardBody>

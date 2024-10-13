@@ -11,6 +11,11 @@ import {
   CCardBody,
   CCollapse,
   CButton,
+  CModal,
+  CModalHeader,
+  CModalTitle,
+  CModalBody,
+  CModalFooter,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { AppSidebarNav } from './AppSidebarNav'
@@ -34,6 +39,7 @@ const AppSidebar = () => {
   const [email, setEmail] = useState('user@mail.com')
   const [hovered, setHovered] = useState(false)
   const [collapse, setCollapse] = useState(false) // State to manage collapse
+  const [logoutConfirmModalVisible, setLogoutConfirmModalVisible] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -52,6 +58,10 @@ const AppSidebar = () => {
 
     fetchUserProfile()
   }, [])
+
+  const handleLogoutConfirmation = () => {
+    setLogoutConfirmModalVisible(true)
+  }
 
   const handleLogout = async () => {
     try {
@@ -75,7 +85,7 @@ const AppSidebar = () => {
   }
 
   const toggleCollapse = () => {
-    setCollapse(!collapse) // Toggle the collapse state when clicking the card
+    setCollapse(!collapse)
   }
 
   return (
@@ -181,7 +191,7 @@ const AppSidebar = () => {
               <CButton
                 color="danger"
                 size="sm"
-                onClick={handleLogout}
+                onClick={handleLogoutConfirmation}
                 className="w-100"
                 style={{
                   padding: '0.25rem 0.5rem',
@@ -212,6 +222,25 @@ const AppSidebar = () => {
           onClick={() => dispatch({ type: 'set', sidebarUnfoldable: !unfoldable })}
         />
       </CSidebarFooter>
+
+      {/* Logout Confirmation Modal */}
+      <CModal
+        visible={logoutConfirmModalVisible}
+        onClose={() => setLogoutConfirmModalVisible(false)}
+      >
+        <CModalHeader>
+          <CModalTitle>Confirm Logout</CModalTitle>
+        </CModalHeader>
+        <CModalBody>Are you sure you want to logout?</CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setLogoutConfirmModalVisible(false)}>
+            Cancel
+          </CButton>
+          <CButton color="danger" onClick={handleLogout}>
+            Logout
+          </CButton>
+        </CModalFooter>
+      </CModal>
     </CSidebar>
   )
 }

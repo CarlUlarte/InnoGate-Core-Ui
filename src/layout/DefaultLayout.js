@@ -20,7 +20,6 @@ const DefaultLayout = () => {
         <div className="body flex-grow-1">
           <AppContent role={role} />
         </div>
-        <AppFooter />
       </div>
     </div>
   )
