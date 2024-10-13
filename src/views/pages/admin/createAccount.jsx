@@ -15,15 +15,11 @@ import {
   CRow,
   CCol,
   CImage,
-  CToaster,
-  CToast,
-  CToastBody,
-  CToastClose,
-  CToastHeader,
 } from '@coreui/react'
 import { setDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from 'src/backend/firebase'
+import CustomToast from 'src/components/Toast/CustomToast'
 
 const defaultProfilePic = 'src/assets/images/avatars/pic.png'
 
@@ -264,33 +260,8 @@ const CreateAccount = () => {
         </CModalFooter>
       </CModal>
 
-      {toast && (
-        <CToaster placement="top-center" className="mt-3">
-          <CToast autohide={true} visible={true} onClose={() => setToast(null)} delay={1500}>
-            <CToastHeader closeButton>
-              <svg
-                className="rounded me-2"
-                width="20"
-                height="20"
-                xmlns="http://www.w3.org/2000/svg"
-                preserveAspectRatio="xMidYMid slice"
-                focusable="false"
-                role="img"
-              >
-                <rect
-                  width="100%"
-                  height="100%"
-                  fill={toast.color === 'danger' ? 'red' : 'green'}
-                ></rect>
-              </svg>
-              <div className="fw-bold me-auto">
-                {toast.color === 'success' || toast.color === 'warning' ? 'Success!' : 'Error'}
-              </div>
-            </CToastHeader>
-            <CToastBody>{toast.message}</CToastBody>
-          </CToast>
-        </CToaster>
-      )}
+      {/* Custom Toast Notification */}
+      <CustomToast toast={toast} setToast={setToast} />
     </CCard>
   )
 }
