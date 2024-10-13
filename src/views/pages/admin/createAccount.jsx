@@ -16,7 +16,7 @@ import {
   CCol,
   CImage,
 } from '@coreui/react'
-import { setDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
+import { setDoc, updateDoc, collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from 'src/backend/firebase'
 import CustomToast from 'src/components/Toast/CustomToast'
@@ -36,38 +36,75 @@ const CreateAccount = () => {
   const [adminEmail, setAdminEmail] = useState('')
   const [toast, setToast] = useState(null)
 
+  // State to hold last used IDs for advisers and teachers
+  const [lastAdviserID, setLastAdviserID] = useState(0)
+  const [lastTeacherID, setLastTeacherID] = useState(0)
+
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchAndAssignIDs = async () => {
       const querySnapshot = await getDocs(collection(db, 'users'))
       const usersList = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }))
       setUsers(usersList)
+
+      let maxAdviserID = 0
+      let maxTeacherID = 0
+
+      // Scan through the users to find the maximum adviserID and teacherID
+      usersList.forEach((user) => {
+        if (user.role === 'Adviser' && user.adviserID) {
+          const adviserID = parseInt(user.adviserID, 10)
+          if (adviserID > maxAdviserID) maxAdviserID = adviserID
+        }
+        if (user.role === 'Teacher' && user.teacherID) {
+          const teacherID = parseInt(user.teacherID, 10)
+          if (teacherID > maxTeacherID) maxTeacherID = teacherID
+        }
+      })
+
+      // Set the last used IDs in state
+      setLastAdviserID(maxAdviserID)
+      setLastTeacherID(maxTeacherID)
     }
 
-    fetchUsers()
+    fetchAndAssignIDs()
   }, [])
 
   const handleAddUser = async () => {
     setLoading(true)
     try {
-      // Step 1: Create the new user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
-      // Step 3: Re-sign in as the admin user (wait for completion)
       await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
 
-      // Step 2: Save the new user's information in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      let newUser = {
         uid: user.uid,
         name,
         email,
         role,
         photoURL: defaultProfilePic,
-        ...(role === 'Student' && { groupID: '' }) // Add groupID if role is Student
-      })
+      }
 
-      // Step 4: Update local user state and UI
-      setUsers([...users, { id: user.uid, name, email, role, photoURL: defaultProfilePic }])
+      if (role === 'Adviser') {
+        const newAdviserID = lastAdviserID + 1
+        setLastAdviserID(newAdviserID)
+        newUser.adviserID = newAdviserID.toString()
+      } else if (role === 'Teacher') {
+        const newTeacherID = lastTeacherID + 1
+        setLastTeacherID(newTeacherID)
+        newUser.teacherID = newTeacherID.toString()
+      } else if (role === 'Student') {
+        newUser = {
+          ...newUser,
+          groupID: '',
+          myTeacher: '',
+          myAdviser: ''
+        }
+      }
+
+      await setDoc(doc(db, 'users', user.uid), newUser)
+
+      setUsers([...users, { id: user.uid, ...newUser }])
       setName('')
       setEmail('')
       setRole('')
@@ -75,21 +112,17 @@ const CreateAccount = () => {
       setModalVisible(false)
       setPasswordModalVisible(false)
 
-      // Step 5: Show success toast notification
       setToast({
         color: 'success',
         message: `User ${name} created successfully!`,
       })
     } catch (error) {
       console.error('Error adding user: ', error.message)
-
-      // Show error toast notification
       setToast({
         color: 'danger',
         message: `Error: ${error.message}`,
       })
     } finally {
-      // Ensure that the loading state is turned off after the operation
       setLoading(false)
     }
   }
@@ -105,16 +138,12 @@ const CreateAccount = () => {
     try {
       await deleteDoc(doc(db, 'users', userId))
       setUsers(users.filter((user) => user.id !== userId))
-
-      // Show delete success toast
       setToast({
         color: 'warning',
         message: 'User deleted successfully!',
       })
     } catch (error) {
       console.error('Error deleting user:', error)
-
-      // Show error toast
       setToast({
         color: 'danger',
         message: `Error: ${error.message}`,
