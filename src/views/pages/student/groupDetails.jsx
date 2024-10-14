@@ -191,3 +191,37 @@ const GroupDetails = () => {
 }
 
 export default GroupDetails
+
+// Inline CSS
+const styles = {
+  membersList: {
+    listStyleType: 'none',
+    paddingLeft: 0,
+  },
+  memberItem: {
+    marginBottom: '10px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  memberImage: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    backgroundColor: '#ddd',
+    marginRight: '10px',
+  },
+  thesisInfo: {
+    marginBottom: '10px',
+  },
+  adviserSection: {
+    display: 'flex',
+    justifyContent: 'space-between',
+  },
+  adviserList: {
+    listStyleType: 'none',
+    paddingLeft: 0,
+  },
+  adviserItem: {
+    marginBottom: '10px',
+  },
+}
