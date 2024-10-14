@@ -6,7 +6,7 @@ const CustomToast = ({ toast, setToast }) => {
   if (!toast) return null
 
   return (
-    <CToaster placement="top-center" className="mt-3">
+    <CToaster placement="top-end" className="mt-3" style={{ marginRight: '20px' }}>
       <CToast autohide={true} visible={true} onClose={() => setToast(null)} delay={1500}>
         <CToastHeader closeButton>
           <svg
