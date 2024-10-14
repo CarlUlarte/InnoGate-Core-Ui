@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from 'src/backend/firebase' // Adjust the path according to your project structure
 import { getUserRole } from 'src/backend/firebase' // The function to get role from Firestore
+import { CSpinner } from '@coreui/react'
 
 // Create the RoleContext
 const RoleContext = createContext()
@@ -33,7 +34,11 @@ export const RoleProvider = ({ children }) => {
 
   // Show loading spinner while role is being fetched
   if (loading) {
-    return <div>Loading...</div>
+    return (
+      <div className="d-flex justify-content-center align-items-center">
+        <CSpinner className="m-5" />
+      </div>
+    )
   }
 
   return <RoleContext.Provider value={role}>{children}</RoleContext.Provider>

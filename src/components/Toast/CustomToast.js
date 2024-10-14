@@ -26,7 +26,7 @@ const CustomToast = ({ toast, setToast }) => {
                   ? 'red'
                   : toast.color === 'warning' || toast.color === 'success'
                     ? 'green'
-                    : 'gray' // Default color (you can adjust this as needed)
+                    : 'gray'
               }
             />
           </svg>

@@ -12,6 +12,7 @@ import {
   CInputGroup,
   CInputGroupText,
   CRow,
+  CSpinner, // Import CoreUI Spinner
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilLockLocked, cilUser } from '@coreui/icons'
@@ -23,6 +24,7 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false) // State to track loading status
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -48,6 +50,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
+    setLoading(true) // Start loading spinner
 
     try {
       // Sign in the user
@@ -83,6 +86,8 @@ const Login = () => {
           setError('An error occurred. Please try again.')
           break
       }
+    } finally {
+      setLoading(false) // Stop loading spinner
     }
   }
 
@@ -126,8 +131,14 @@ const Login = () => {
                     </CInputGroup>
                     <CRow className="mb-3">
                       <CCol className="d-flex justify-content-center">
-                        <CButton color="primary" className="px-4" type="submit">
-                          Login
+                        <CButton color="primary" className="px-4" type="submit" disabled={loading}>
+                          {loading ? (
+                            <>
+                              <CSpinner size="sm" /> Login
+                            </>
+                          ) : (
+                            'Login'
+                          )}
                         </CButton>
                       </CCol>
                     </CRow>
