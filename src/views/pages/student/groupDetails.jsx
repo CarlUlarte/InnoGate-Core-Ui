@@ -14,7 +14,7 @@ import {
 } from '@coreui/react'
 
 // Group Details Component
-const groupDetails = () => {
+const GroupDetails = () => {
   // Dummy data for the group details
   const group = {
     members: [
@@ -54,7 +54,7 @@ const groupDetails = () => {
   return (
     <CContainer>
       <CRow className="my-4">
-        {/* Members */}
+        {/* Left column for Members */}
         <CCol md={4}>
           <CCard>
             <CCardHeader>
@@ -65,7 +65,7 @@ const groupDetails = () => {
                 {group.members.map((member, index) => (
                   <li key={index} style={{ marginBottom: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      {/* replace this with an actual image */}
+                      {/* You can replace this with an actual image */}
                       <div
                         style={{
                           width: '40px',
@@ -84,7 +84,7 @@ const groupDetails = () => {
           </CCard>
         </CCol>
 
-        {/ Group Information */}
+        {/* Right column for Group Information */}
         <CCol md={8}>
           <CCard className="mb-3">
             <CCardHeader>
@@ -190,4 +190,4 @@ const groupDetails = () => {
   )
 }
 
-export default groupDetails
+export default GroupDetails
