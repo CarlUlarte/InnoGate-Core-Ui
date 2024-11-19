@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc } from 'firebase/firestore'; // Import doc and getDoc
+import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore'; // Import doc and getDoc
 import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
+
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -39,6 +40,21 @@ export const getUserGroupID = async (userId) => {
     return userSnapshot.data().groupID; // Assuming the field name is 'groupID'
   }
   return null; // Return null if the user does not exist
+};
+
+export const rejectProposal = async (proposalId, rejectionReason) => {
+  const proposalRef = doc(db, 'proposals', proposalId); // Reference to the proposal document
+
+  try {
+    // Update the proposal's status to rejected and store the rejection reason
+    await updateDoc(proposalRef, {
+      status: 'rejected',
+      rejectionReason: rejectionReason,
+    });
+    console.log('Proposal rejected successfully.');
+  } catch (error) {
+    console.error('Error rejecting proposal: ', error);
+  }
 };
 
 // Set the persistence for Firebase Auth to sessionPersistence
