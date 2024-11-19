@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { CCard, CCardBody, CCardHeader, CButton } from '@coreui/react'
 import { Maximize, Minimize } from 'lucide-react'
+import CIcon from '@coreui/icons-react'
+import { cilDataTransferUp, cilCheckCircle } from '@coreui/icons'
 
 const UploadManuscript = () => {
   const [file, setFile] = useState(null)
@@ -112,21 +114,13 @@ const UploadManuscript = () => {
                 <input {...getInputProps()} />
                 {isDragActive ? (
                   <p className="d-flex align-items-center justify-content-center flex-column">
-                    <img
-                      src="src/assets/images/upload.png"
-                      alt="upload"
-                      style={{ width: '80px', marginBottom: '10px' }}
-                    />
+                    <CIcon icon={cilDataTransferUp} size="3xl" />
                     Drag and Drop here <br /> or <br />
                     <span style={{ color: 'blue', cursor: 'pointer' }}>Browse files</span>
                   </p>
                 ) : (
                   <p className="d-flex align-items-center justify-content-center flex-column">
-                    <img
-                      src="src/assets/images/upload.png"
-                      alt="upload"
-                      style={{ width: '80px', marginBottom: '10px' }}
-                    />
+                    <CIcon icon={cilDataTransferUp} size="3xl" />
                     Drag and Drop here <br /> or <br />
                     <span style={{ color: 'blue', cursor: 'pointer' }}>Browse files</span>
                   </p>
@@ -148,11 +142,7 @@ const UploadManuscript = () => {
             </div>
           ) : (
             <div className="uploaded-section text-center">
-              <img
-                src="src/assets/images/uploaded.png"
-                alt="Uploaded document"
-                style={{ width: '80px', marginBottom: '10px' }}
-              />
+              <CIcon icon={cilCheckCircle} size="3xl" />
               <p>File uploaded: {file.name}</p>
               {renderPreview()}
               <div className="action-buttons">

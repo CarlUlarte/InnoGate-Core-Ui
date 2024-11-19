@@ -39,6 +39,7 @@ const ThesisProposal = () => {
   const [loadingStates, setLoadingStates] = useState({})
   const [fileUploadingStates, setFileUploadingStates] = useState({})
   const [toast, setToast] = useState(null)
+  const [formLoading, setFormLoading] = useState(false)
 
   // Fetch user role and groupID when the component mounts
   useEffect(() => {
@@ -63,19 +64,28 @@ const ThesisProposal = () => {
   // Fetch proposals from Firestore when the component mounts
   useEffect(() => {
     const fetchProposals = async () => {
-      if (!userGroupID) return // Wait for userGroupID to be set
-      const querySnapshot = await getDocs(collection(db, 'proposals'))
-      const proposalsData = []
-      querySnapshot.forEach((doc) => {
-        const data = doc.data()
-        if (data.groupID === userGroupID) {
-          // Filter by user's groupID
-          proposalsData.push({ id: doc.id, ...data })
-        }
-      })
-      setForms(proposalsData) // Set forms to the fetched proposals
+      try {
+        setFormLoading(true)
+        if (!userGroupID) return // Wait for userGroupID to be set
+        const querySnapshot = await getDocs(collection(db, 'proposals'))
+        const proposalsData = []
+        querySnapshot.forEach((doc) => {
+          const data = doc.data()
+          if (data.groupID === userGroupID) {
+            // Filter by user's groupID
+            proposalsData.push({ id: doc.id, ...data })
+          }
+        })
+        setForms(proposalsData) // Set forms to the fetched proposals
+      } catch (error) {
+        setToast({
+          color: 'danger',
+          message: `Error: ${error.message}`,
+        })
+      } finally {
+        setFormLoading(false)
+      }
     }
-
     fetchProposals()
   }, [userGroupID]) // Depend on userGroupID to fetch proposals
 
@@ -380,9 +390,7 @@ const ThesisProposal = () => {
                                   {form.abstractForm ? 'Change File' : 'Upload File'}
                                 </CButton>
                                 {form.abstractForm && (
-                                  <small className="text-secondary ms-2">
-                                    File Uploaded! {form.fileName && `(${form.fileName})`}
-                                  </small>
+                                  <small className="text-secondary ms-2">File Uploaded!</small>
                                 )}
                               </>
                             )}
@@ -456,7 +464,15 @@ const ThesisProposal = () => {
 
   return (
     <CContainer>
-      {renderForms()}
+      {formLoading ? (
+        <>
+          <div className="d-flex justify-content-center">
+            <CSpinner size="m" color="primary" className="m-5" />
+          </div>
+        </>
+      ) : (
+        renderForms()
+      )}
 
       <div className="d-flex justify-content-center gap-3">
         <CButton onClick={handleDownload} color="primary" variant="outline" className="mb-3">
