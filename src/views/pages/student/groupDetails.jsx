@@ -31,60 +31,83 @@ const GroupDetails = () => {
   const [selectedAdviser, setSelectedAdviser] = useState('')
   const [modalVisible, setModalVisible] = useState(false)
   const [proposalId, setProposalId] = useState(null)
+  const [groupID, setGroupID] = useState(null)
 
   // Fetch group and thesis details
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
+        console.log('Starting to fetch group details...')
         const currentUser = auth.currentUser
-        if (!currentUser) return
+        if (!currentUser) {
+          console.log('No current user found')
+          return
+        }
 
+        // First, get the current user's group ID
         const usersRef = collection(db, 'users')
-        const userQuery = query(
-          usersRef,
-          where('uid', '==', currentUser.uid),
-          where('role', '==', 'Student'),
-        )
+        const userQuery = query(usersRef, where('uid', '==', currentUser.uid))
         const userSnapshot = await getDocs(userQuery)
 
-        if (userSnapshot.empty) return
+        if (userSnapshot.empty) {
+          console.log('No user document found')
+          return
+        }
 
-        const user = userSnapshot.docs[0].data()
-        const groupID = user.groupID
-        if (!groupID) return
+        const userData = userSnapshot.docs[0].data()
+        const userGroupID = userData.groupID
+
+        if (!userGroupID) {
+          console.log('User has no group ID')
+          return
+        }
+
+        console.log('Found group ID:', userGroupID)
+        setGroupID(userGroupID)
 
         // Fetch group members
-        const membersQuery = query(
-          usersRef,
-          where('groupID', '==', groupID),
-          where('role', '==', 'Student'),
-        )
+        const membersQuery = query(usersRef, where('groupID', '==', userGroupID))
         const membersSnapshot = await getDocs(membersQuery)
-        const members = membersSnapshot.docs.map((doc) => doc.data().name)
+        
+        if (membersSnapshot.empty) {
+          console.log('No members found for group:', userGroupID)
+          return
+        }
+
+        const members = membersSnapshot.docs.map(doc => {
+          const data = doc.data()
+          return {
+            name: data.name || 'Unknown Name',
+            email: data.email || 'No Email',
+            role: data.role || 'Unknown Role'
+          }
+        }).filter(member => member.role === 'Student')
 
         // Fetch accepted proposal
         const proposalsRef = collection(db, 'proposals')
         const proposalQuery = query(
           proposalsRef,
-          where('groupID', '==', groupID),
-          where('status', '==', 'accepted'),
+          where('groupID', '==', userGroupID),
+          where('status', '==', 'accepted')
         )
         const proposalSnapshot = await getDocs(proposalQuery)
 
-        if (proposalSnapshot.empty) return
+        let proposalData = {}
+        if (!proposalSnapshot.empty) {
+          const proposal = proposalSnapshot.docs[0]
+          proposalData = proposal.data()
+          setProposalId(proposal.id)
+          setSelectedAdviser(proposalData.adviser || '')
+        }
 
-        const proposal = proposalSnapshot.docs[0]
-        const proposalData = proposal.data()
-
-        setProposalId(proposal.id)
-        setSelectedAdviser(proposalData.adviser || '') // Set adviser if exists
         setGroup({
-          members,
-          thesisTitle: proposalData.title,
-          thesisDescription: proposalData.description,
-          client: proposalData.client,
-          field: proposalData.field,
+          members: members,
+          thesisTitle: proposalData.title || '',
+          thesisDescription: proposalData.description || '',
+          client: proposalData.client || '',
+          field: proposalData.field || '',
         })
+
       } catch (error) {
         console.error('Error fetching group details:', error)
       }
@@ -93,7 +116,7 @@ const GroupDetails = () => {
     fetchGroupDetails()
   }, [])
 
-  // Fetch advisers
+  // Fetch advisers when modal opens
   useEffect(() => {
     const fetchAdvisers = async () => {
       try {
@@ -106,27 +129,46 @@ const GroupDetails = () => {
           name: doc.data().name,
         }))
 
+        console.log('Fetched advisers:', advisers)
         setAdviserList(advisers)
       } catch (error) {
         console.error('Error fetching advisers:', error)
       }
     }
 
-    fetchAdvisers()
-  }, [])
+    if (modalVisible) {
+      fetchAdvisers()
+    }
+  }, [modalVisible])
 
-  // Handle adviser selection
-  const handleAdviserSelect = async (adviser) => {
-    if (!proposalId) return
+  const handleAdviserSelect = async (adviserName) => {
+    console.log('handleAdviserSelect called with adviser:', adviserName)
+    console.log('Current proposalId:', proposalId)
+    
+    if (!proposalId) {
+      console.error('No proposal ID found')
+      alert('Cannot assign adviser: No proposal found')
+      return
+    }
 
     try {
       const proposalRef = doc(db, 'proposals', proposalId)
-      await updateDoc(proposalRef, { adviser })
+      
+      console.log('Attempting to update proposal:', proposalId)
+      console.log('Update data:', { adviser: adviserName })
 
-      setSelectedAdviser(adviser) // Update state with the selected adviser
-      setModalVisible(false) // Close modal
+      await updateDoc(proposalRef, {
+        adviser: adviserName,
+        lastUpdated: new Date().toISOString()
+      })
+
+      console.log('Successfully updated adviser')
+      setSelectedAdviser(adviserName)
+      setModalVisible(false)
+
     } catch (error) {
-      console.error('Error assigning adviser to the proposal:', error)
+      console.error('Error updating adviser:', error)
+      alert('Failed to update adviser: ' + error.message)
     }
   }
 
@@ -139,23 +181,30 @@ const GroupDetails = () => {
               <strong>Members</strong>
             </CCardHeader>
             <CCardBody>
-              <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-                {group.members.map((member, index) => (
-                  <li key={index} style={{ marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <CImage
-                        src={defaultProfilePic}
-                        width={30}
-                        height={30}
-                        alt="Profile Picture"
-                        className="me-3"
-                        style={{ border: '1px solid gray', borderRadius: '15px' }}
-                      />
-                      <span>{member}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {group.members.length > 0 ? (
+                <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+                  {group.members.map((member, index) => (
+                    <li key={index} style={{ marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <CImage
+                          src={defaultProfilePic}
+                          width={30}
+                          height={30}
+                          alt="Profile Picture"
+                          className="me-3"
+                          style={{ border: '1px solid gray', borderRadius: '15px' }}
+                        />
+                        <div>
+                          <div>{member.name}</div>
+                          <div style={{ fontSize: '0.8em', color: '#666' }}>{member.email}</div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No members found in this group</p>
+              )}
             </CCardBody>
           </CCard>
         </CCol>
@@ -234,15 +283,26 @@ const GroupDetails = () => {
           <CModalTitle>Select an Adviser</CModalTitle>
         </CModalHeader>
         <CModalBody>
-          <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-            {adviserList.map((adviser) => (
-              <li key={adviser.id} style={{ marginBottom: '10px' }}>
-                <CButton color="link" onClick={() => handleAdviserSelect(adviser.name)}>
-                  {adviser.name}
-                </CButton>
-              </li>
-            ))}
-          </ul>
+          {adviserList.length > 0 ? (
+            <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+              {adviserList.map((adviser) => (
+                <li key={adviser.id} style={{ marginBottom: '10px' }}>
+                  <CButton
+                    color="primary"
+                    className="w-100 text-start"
+                    onClick={() => {
+                      console.log('Adviser button clicked:', adviser.name)
+                      handleAdviserSelect(adviser.name)
+                    }}
+                  >
+                    {adviser.name}
+                  </CButton>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No advisers available</p>
+          )}
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={() => setModalVisible(false)}>
