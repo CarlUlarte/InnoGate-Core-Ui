@@ -64,91 +64,98 @@ const ThesisProposal = () => {
   // Fetch proposals from Firestore when the component mounts
   useEffect(() => {
     const fetchProposals = async () => {
-      try {
-        setFormLoading(true)
-        if (!userGroupID) return // Wait for userGroupID to be set
-        const querySnapshot = await getDocs(collection(db, 'proposals'))
-        const proposalsData = []
-        querySnapshot.forEach((doc) => {
-          const data = doc.data()
-          if (data.groupID === userGroupID) {
-            // Filter by user's groupID
-            proposalsData.push({ id: doc.id, ...data })
-          }
-        })
-        setForms(proposalsData) // Set forms to the fetched proposals
-      } catch (error) {
-        setToast({
-          color: 'danger',
-          message: `Error: ${error.message}`,
-        })
-      } finally {
-        setFormLoading(false)
-      }
-    }
-    fetchProposals()
-  }, [userGroupID]) // Depend on userGroupID to fetch proposals
+      if (!userGroupID) return;
+      const querySnapshot = await getDocs(collection(db, 'proposals'));
+      const proposalsData = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.groupID === userGroupID) {
+          proposalsData.push({
+            id: doc.id,
+            ...data,
+            editable: data.status === 'needs_revision' || (data.status !== 'rejected' && !data.submitted),
+          });
+        }
+      });
+      setForms(proposalsData);
+    };
+
+    fetchProposals();
+  }, [userGroupID]);
+
+  // Function to determine visibility based on the proposal's status
+  const isVisible = (status) => {
+    return status === 'approved';
+  };
 
   const getLoadingState = (index) => {
-    return loadingStates[index] || false // Default to false if not set
-  }
+    return loadingStates[index] || false; // Default to false if not set
+  };
 
   const getFileUploadingState = (index) => {
-    return fileUploadingStates[index] || false // Default to false if not set
-  }
+    return fileUploadingStates[index] || false; // Default to false if not set
+  };
+
+  const isFormEditable = (form) => {
+    return form.status === 'needs_revision' || (form.status !== 'rejected' && !form.submitted);
+  };
 
   // Firestore submission logic
   const handleSubmit = async () => {
     const index = selectedFormIndex
     if (userRole !== 'Student') {
-      // Replace 'Student' with the actual role you want to check
       setToast({
         color: 'danger',
-        message: `Error: ${error.message}`,
+        message: 'Error: Only students can submit proposals',
       })
       return
     }
-
+  
     const form = forms[index]
-
-    // Check if all fields are filled
+  
     if (!form.title || !form.description || !form.client || !form.field || !form.abstractForm) {
       setToast({
         color: 'danger',
-        message: `Please fill in all fields before submitting.`,
+        message: 'Please fill in all fields before submitting.',
       })
       return
     }
-
+  
     try {
       setLoading(true)
-      // Set the submitting index for the current form
-      setSubmittingIndex(index) // Set the current index to indicate which button is submitting
-
+      setSubmittingIndex(index)
+  
       if (form.id) {
-        // Update the proposal in Firestore if it exists
-        const proposalRef = doc(db, 'proposals', form.id) // Get the reference of the document to update
+        const proposalRef = doc(db, 'proposals', form.id)
         await updateDoc(proposalRef, {
-          ...form, // Update with current form data
-          submitted: true, // Mark as submitted
+          ...form,
+          submitted: true,
+          status: 'pending',
+          teacherComment: '',
+          lastUpdated: new Date().toISOString()
         })
-
-        // Immediately update the local state to reflect the submission
+  
         setForms((prevForms) => {
           const updatedForms = [...prevForms]
-          updatedForms[index] = { ...updatedForms[index], submitted: true, editable: false } // Update the specific form to indicate submission and make it uneditable
+          updatedForms[index] = { 
+            ...updatedForms[index], 
+            submitted: true, 
+            editable: false,
+            status: 'pending',
+            teacherComment: ''
+          }
           return updatedForms
         })
-
+  
         setToast({
           color: 'success',
-          message: 'Proposal submitted!',
+          message: form.status === 'needs_revision' ? 'Revised proposal submitted!' : 'Proposal submitted!',
         })
       } else {
         setToast({
           color: 'danger',
           message: 'Please save your proposal before submitting.',
-        }) // Prompt to save before submitting
+        })
       }
     } catch (error) {
       setToast({
@@ -233,20 +240,10 @@ const ThesisProposal = () => {
   }
   const handleSave = async (index) => {
     const form = forms[index]
-    console.log('Form values:', form)
-
-    // Check if all fields are filled before saving
-    if (!form.title || !form.description || !form.client || !form.field || !form.abstractForm) {
-      setToast({
-        color: 'danger',
-        message: 'Please fill in all fields before saving',
-      })
-      return
-    }
-
+    
     try {
       setLoadingStates((prevStates) => ({ ...prevStates, [index]: true }))
-      // If the form already has an ID, update it
+      
       if (form.id) {
         const proposalRef = doc(db, 'proposals', form.id)
         await updateDoc(proposalRef, {
@@ -254,18 +251,31 @@ const ThesisProposal = () => {
           description: form.description,
           client: form.client,
           field: form.field,
-          abstractForm: form.abstractForm, // Ensure abstractForm contains the download URL
+          abstractForm: form.abstractForm,
+          status: form.status === 'needs_revision' ? 'pending' : form.status,
+          teacherComment: form.status === 'needs_revision' ? '' : form.teacherComment,
           groupID: userGroupID,
+          lastUpdated: new Date().toISOString()
         })
-
-        // Set the editable state to false after saving
+  
         setForms((prevForms) => {
           const updatedForms = [...prevForms]
-          updatedForms[index] = { ...updatedForms[index], editable: false }
+          updatedForms[index] = { 
+            ...updatedForms[index], 
+            // Keep form editable if it needs revision
+            editable: form.status === 'needs_revision' || !form.submitted,
+            status: form.status === 'needs_revision' ? 'pending' : form.status,
+            teacherComment: form.status === 'needs_revision' ? '' : form.teacherComment
+          }
           return updatedForms
         })
+
+        setToast({
+          color: 'success',
+          message: form.status === 'needs_revision' ? 'Revision saved successfully!' : 'Proposal saved successfully!',
+        })
+        
       } else {
-        // Add a new proposal if it does not exist
         const newDoc = await addDoc(collection(db, 'proposals'), {
           title: form.title,
           description: form.description,
@@ -274,16 +284,26 @@ const ThesisProposal = () => {
           abstractForm: form.abstractForm,
           groupID: userGroupID,
           submitted: false,
+          status: 'draft',
+          lastUpdated: new Date().toISOString()
         })
 
         setForms((prevForms) =>
           prevForms.map((item, idx) =>
-            idx === index ? { ...item, id: newDoc.id, editable: false } : item,
+            idx === index ? { ...item, id: newDoc.id, editable: false, status: 'draft' } : item,
           ),
         )
+
+        setToast({
+          color: 'success',
+          message: 'New proposal saved successfully!',
+        })
       }
     } catch (error) {
-      console.error('Error saving document:', error)
+      setToast({
+        color: 'danger',
+        message: `Error saving proposal: ${error.message}`,
+      })
     } finally {
       setLoadingStates((prevStates) => ({ ...prevStates, [index]: false }))
     }
@@ -294,27 +314,79 @@ const ThesisProposal = () => {
     setShowConfirmModal(true)
   }
 
+  const getCardStyle = (status) => {
+    switch (status) {
+      case 'rejected':
+        return {
+          borderColor: '#dc3545',
+          borderWidth: '2px',
+          backgroundColor: '#ffebee',
+        };
+      case 'approved':
+        return {
+          borderColor: '#28a745',
+          borderWidth: '2px',
+          backgroundColor: '#e9fbe9',
+        };
+      default:
+        return {};
+    }
+  };
+  
+
+  // Update the render forms function
   const renderForms = () => {
+    // Filter out rejected proposals
+    const filteredForms = forms.filter(form => form.status !== 'rejected');
+  
     return (
       <TransitionGroup>
-        {forms.map((form, index) => (
+        {filteredForms.map((form, index) => (
           <CSSTransition key={index} timeout={500} classNames="fade">
             <CCol xs={12}>
-              <CCard className="mb-4">
+              <CCard className="mb-4" style={getCardStyle(form.status)}>
                 <CCardHeader>
                   <strong>Thesis Proposal Form {index + 1}</strong>
+                  {form.status === 'approved' && (
+                    <span className="ms-2 text-success">(APPROVED)</span>
+                  )}
+                  {form.status === 'rejected' && (
+                    <span className="ms-2 text-danger">(REJECTED)</span>
+                  )}
                 </CCardHeader>
                 <CCardBody>
                   <CForm>
+                    {/* Show approval message */}
+                    {form.status === 'approved' && (
+                      <div className="alert alert-success mb-3">
+                        This proposal has been approved by your teacher.
+                      </div>
+                    )}
+  
+                    {/* Status message for rejected proposals */}
+                    {form.status === 'rejected' && (
+                      <div className="alert alert-danger mb-3">
+                        This proposal has been rejected. Please create a new proposal.
+                      </div>
+                    )}
+  
+                    {form.status === 'needs_revision' && (
+                      <div className="alert alert-warning mb-3">
+                        <strong>Revision Required</strong>
+                        <p>Teacher's Comments: {form.teacherComment}</p>
+                      </div>
+                    )}
+  
+                    {/* Title Field */}
                     <div className="mb-3">
                       <CFormLabel>Title</CFormLabel>
                       <CFormInput
                         value={form.title}
                         onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
-                        disabled={!form.editable}
+                        disabled={!form.editable || form.status === 'rejected'}
                       />
                     </div>
-
+  
                     {/* Description Field */}
                     <div className="mb-3">
                       <CFormLabel>Description</CFormLabel>
@@ -322,7 +394,8 @@ const ThesisProposal = () => {
                         rows={3}
                         value={form.description}
                         onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
-                        disabled={!form.editable}
+                        disabled={!form.editable || form.status === 'rejected'}
+                        className={form.status === 'rejected' ? 'bg-light' : ''}
                       />
                     </div>
 
@@ -333,7 +406,8 @@ const ThesisProposal = () => {
                           <CFormInput
                             value={form.client}
                             onChange={(e) => handleFieldChange(index, 'client', e.target.value)}
-                            disabled={!form.editable}
+                            disabled={!form.editable || form.status === 'rejected'}
+                            className={form.status === 'rejected' ? 'bg-light' : ''}
                           />
                         </div>
                       </CCol>
@@ -344,7 +418,8 @@ const ThesisProposal = () => {
                           <CFormSelect
                             value={form.field}
                             onChange={(e) => handleFieldChange(index, 'field', e.target.value)}
-                            disabled={!form.editable}
+                            disabled={!form.editable || form.status === 'rejected'}
+                            className={form.status === 'rejected' ? 'bg-light' : ''}
                           >
                             <option value="">Select Field</option>
                             <option value="field1">Field 1</option>
@@ -354,6 +429,7 @@ const ThesisProposal = () => {
                           </CFormSelect>
                         </div>
                       </CCol>
+
                       <CCol md={4}>
                         <div className="mb-3">
                           <CFormLabel>Abstract Form</CFormLabel>
@@ -368,24 +444,16 @@ const ThesisProposal = () => {
                                 <input
                                   type="file"
                                   id={`fileInput-${index}`}
-                                  onChange={(e) => {
-                                    handleFileChange(e, index)
-                                    setForms((prevForms) => {
-                                      const updatedForms = [...prevForms]
-                                      updatedForms[index].fileName = e.target.files[0]?.name || ''
-                                      return updatedForms
-                                    })
-                                  }}
+                                  onChange={(e) => handleFileChange(e, index)}
                                   style={{ display: 'none' }}
+                                  disabled={form.status === 'rejected'}
                                 />
                                 <CButton
                                   className="w-100"
                                   color="secondary"
                                   variant="outline"
-                                  onClick={() =>
-                                    document.getElementById(`fileInput-${index}`).click()
-                                  }
-                                  disabled={!form.editable}
+                                  onClick={() => document.getElementById(`fileInput-${index}`).click()}
+                                  disabled={!form.editable || form.status === 'rejected'}
                                 >
                                   {form.abstractForm ? 'Change File' : 'Upload File'}
                                 </CButton>
@@ -402,7 +470,10 @@ const ThesisProposal = () => {
                     {/* Buttons */}
                     <CRow className="mt-3">
                       <CCol className="d-flex justify-content-end">
-                        {!form.submitted ? (
+                        {/* Show Edit/Save and Submit buttons if:
+                            1. Form needs revision OR
+                            2. Form is not submitted AND not rejected */}
+                        {(form.status === 'needs_revision' || (!form.submitted && form.status !== 'rejected')) ? (
                           <>
                             {form.editable ? (
                               <CButton
@@ -432,16 +503,19 @@ const ThesisProposal = () => {
                               onClick={() => openConfirmModal(index)}
                               disabled={submittingIndex === index}
                             >
-                              Submit
+                              {form.status === 'needs_revision' ? 'Submit Revision' : 'Submit'}
                             </CButton>
                           </>
                         ) : (
                           <CButton color="secondary" disabled>
-                            Submitted
+                            {form.status === 'rejected' ? 'Rejected' : 
+                            form.status === 'pending' ? 'Pending Review' : 
+                            'Submitted'}
                           </CButton>
                         )}
                       </CCol>
                     </CRow>
+
                   </CForm>
                 </CCardBody>
               </CCard>
@@ -461,6 +535,7 @@ const ThesisProposal = () => {
     link.click()
     document.body.removeChild(link)
   }
+  
 
   return (
     <CContainer>
@@ -478,37 +553,51 @@ const ThesisProposal = () => {
         <CButton onClick={handleDownload} color="primary" variant="outline" className="mb-3">
           <CIcon icon={cilDataTransferDown} /> Abstract Form Template
         </CButton>
-        <CButton onClick={addNewProposalForm} color="primary" className="mb-3">
+        <CButton 
+          onClick={addNewProposalForm} 
+          color="primary" 
+          className="mb-3"
+          disabled={forms.some(form => form.status === 'needs_revision')} // Disable if any form needs revision
+        >
           <CIcon icon={cilPlus} /> Add New Proposal
         </CButton>
       </div>
 
       <CModal visible={showConfirmModal} onClose={() => setShowConfirmModal(false)}>
-        <CModalHeader>
-          <CModalTitle>Confirm Submission</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          Are you sure you want to submit this proposal? This can't be undone.
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setShowConfirmModal(false)}>
-            Cancel
-          </CButton>
-          <CButton color="primary" onClick={handleSubmit}>
-            {loading ? (
-              <>
-                <CSpinner size="sm" /> Confirm
-              </>
-            ) : (
-              'Confirm'
-            )}
-          </CButton>
-        </CModalFooter>
-      </CModal>
+          <CModalHeader>
+            <CModalTitle>
+              {forms[selectedFormIndex]?.status === 'needs_revision' 
+                ? 'Confirm Revision Submission' 
+                : 'Confirm Submission'}
+            </CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            {forms[selectedFormIndex]?.status === 'needs_revision' 
+              ? 'Are you sure you want to submit this revision? This will reset the proposal status to pending.'
+              : 'Are you sure you want to submit this proposal? This cannot be undone.'}
+          </CModalBody>
+          <CModalFooter>
+            <CButton color="secondary" onClick={() => setShowConfirmModal(false)}>
+              Cancel
+            </CButton>
+            <CButton color="primary" onClick={handleSubmit} disabled={loading}>
+              {loading ? (
+                <>
+                  <CSpinner size="sm" /> Confirming
+                </>
+              ) : (
+                forms[selectedFormIndex]?.status === 'needs_revision' 
+                  ? 'Submit Revision' 
+                  : 'Submit'
+              )}
+            </CButton>
+          </CModalFooter>
+        </CModal>
 
       <CustomToast toast={toast} setToast={setToast} />
     </CContainer>
   )
 }
+
 
 export default ThesisProposal
