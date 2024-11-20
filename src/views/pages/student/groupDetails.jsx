@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   CCard,
   CCardBody,
@@ -7,54 +7,132 @@ import {
   CRow,
   CContainer,
   CButton,
+  CImage,
   CModal,
   CModalHeader,
+  CModalTitle,
   CModalBody,
   CModalFooter,
 } from '@coreui/react'
+import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore'
+import { db, auth } from 'src/backend/firebase'
 
-// Group Details Component
+const defaultProfilePic = 'src/assets/images/avatars/pic.png'
+
 const GroupDetails = () => {
-  // Dummy data for the group details
-  const group = {
-    members: [
-      'Dominic Gunio',
-      'Carl Ularte',
-      'Coren Andino',
-      'Joner De Silva',
-      'Caren Tolentino',
-      'Dexzor Navarro',
-      'Lorem Ipsum',
-    ], // Replace with real data later
-    thesisTitle: 'Dancing Computational Technology',
-    thesisDescription:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-    client: 'Registrar', // Placeholder for client
-    field: 'Computational Technology', // Placeholder for field
-  }
-
-  // Dummy data for advisers
-  const advisersList = [
-    'Dr. John Smith',
-    'Prof. Alice Johnson',
-    'Dr. Emily Williams',
-    'Prof. Robert Brown',
-  ]
-
-  // State to handle modal visibility and selected adviser
-  const [modalVisible, setModalVisible] = useState(false)
+  const [group, setGroup] = useState({
+    members: [],
+    thesisTitle: '',
+    thesisDescription: '',
+    client: '',
+    field: '',
+  })
+  const [adviserList, setAdviserList] = useState([])
   const [selectedAdviser, setSelectedAdviser] = useState('')
+  const [modalVisible, setModalVisible] = useState(false)
+  const [proposalId, setProposalId] = useState(null)
 
-  // Function to handle adviser selection
-  const handleAdviserChange = (adviser) => {
-    setSelectedAdviser(adviser)
-    setModalVisible(false) // Close the modal after selection
+  // Fetch group and thesis details
+  useEffect(() => {
+    const fetchGroupDetails = async () => {
+      try {
+        const currentUser = auth.currentUser
+        if (!currentUser) return
+
+        const usersRef = collection(db, 'users')
+        const userQuery = query(
+          usersRef,
+          where('uid', '==', currentUser.uid),
+          where('role', '==', 'Student'),
+        )
+        const userSnapshot = await getDocs(userQuery)
+
+        if (userSnapshot.empty) return
+
+        const user = userSnapshot.docs[0].data()
+        const groupID = user.groupID
+        if (!groupID) return
+
+        // Fetch group members
+        const membersQuery = query(
+          usersRef,
+          where('groupID', '==', groupID),
+          where('role', '==', 'Student'),
+        )
+        const membersSnapshot = await getDocs(membersQuery)
+        const members = membersSnapshot.docs.map((doc) => doc.data().name)
+
+        // Fetch accepted proposal
+        const proposalsRef = collection(db, 'proposals')
+        const proposalQuery = query(
+          proposalsRef,
+          where('groupID', '==', groupID),
+          where('status', '==', 'accepted'),
+        )
+        const proposalSnapshot = await getDocs(proposalQuery)
+
+        if (proposalSnapshot.empty) return
+
+        const proposal = proposalSnapshot.docs[0]
+        const proposalData = proposal.data()
+
+        setProposalId(proposal.id)
+        setSelectedAdviser(proposalData.adviser || '') // Set adviser if exists
+        setGroup({
+          members,
+          thesisTitle: proposalData.title,
+          thesisDescription: proposalData.description,
+          client: proposalData.client,
+          field: proposalData.field,
+        })
+      } catch (error) {
+        console.error('Error fetching group details:', error)
+      }
+    }
+
+    fetchGroupDetails()
+  }, [])
+
+  // Fetch advisers
+  useEffect(() => {
+    const fetchAdvisers = async () => {
+      try {
+        const usersRef = collection(db, 'users')
+        const adviserQuery = query(usersRef, where('role', '==', 'Adviser'))
+        const adviserSnapshot = await getDocs(adviserQuery)
+
+        const advisers = adviserSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name,
+        }))
+
+        setAdviserList(advisers)
+      } catch (error) {
+        console.error('Error fetching advisers:', error)
+      }
+    }
+
+    fetchAdvisers()
+  }, [])
+
+  // Handle adviser selection
+  const handleAdviserSelect = async (adviser) => {
+    if (!proposalId) return
+
+    try {
+      const proposalRef = doc(db, 'proposals', proposalId)
+      await updateDoc(proposalRef, { adviser })
+
+      setSelectedAdviser(adviser) // Update state with the selected adviser
+      setModalVisible(false) // Close modal
+    } catch (error) {
+      console.error('Error assigning adviser to the proposal:', error)
+    }
   }
 
   return (
     <CContainer>
       <CRow className="my-4">
-        {/* Left column for Members */}
         <CCol md={4}>
           <CCard>
             <CCardHeader>
@@ -65,16 +143,14 @@ const GroupDetails = () => {
                 {group.members.map((member, index) => (
                   <li key={index} style={{ marginBottom: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      {/* You can replace this with an actual image */}
-                      <div
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          backgroundColor: '#ddd',
-                          marginRight: '10px',
-                        }}
-                      ></div>
+                      <CImage
+                        src={defaultProfilePic}
+                        width={30}
+                        height={30}
+                        alt="Profile Picture"
+                        className="me-3"
+                        style={{ border: '1px solid gray', borderRadius: '15px' }}
+                      />
                       <span>{member}</span>
                     </div>
                   </li>
@@ -83,61 +159,50 @@ const GroupDetails = () => {
             </CCardBody>
           </CCard>
         </CCol>
-
-        {/* Right column for Group Information */}
         <CCol md={8}>
           <CCard className="mb-3">
             <CCardHeader>
               <strong>Thesis Information</strong>
             </CCardHeader>
             <CCardBody>
-              {/* Thesis Title */}
               <div className="mb-3">
                 <strong>Thesis Title: </strong>
-                <span>{group.thesisTitle}</span>
+                <span>{group.thesisTitle || 'No thesis title assigned'}</span>
               </div>
-
-              {/* Thesis Description */}
               <div className="mb-3">
                 <strong>Description: </strong>
-                <p>{group.thesisDescription}</p>
+                <p>{group.thesisDescription || 'No description available'}</p>
               </div>
             </CCardBody>
           </CCard>
 
-          {/* Adviser Card */}
-          <CRow className="mb-3">
-            <CCol md={12}>
+          <CRow>
+            <CCol md={12} style={{ marginBottom: '15px' }}>
               <CCard>
                 <CCardHeader>
                   <strong>Adviser</strong>
                 </CCardHeader>
                 <CCardBody>
-                  <div className="d-flex justify-content-between">
-                    {/* Display adviser information or buttons */}
-                    {!selectedAdviser ? (
-                      <CButton color="primary" onClick={() => setModalVisible(true)}>
-                        Pick an Adviser
-                      </CButton>
-                    ) : (
-                      <div>
-                        <strong>Selected Adviser: </strong>
-                        {selectedAdviser}
-                      </div>
-                    )}
-                    {/* Conditionally show the change button */}
-                    {selectedAdviser && (
-                      <CButton color="secondary" onClick={() => setModalVisible(true)}>
+                  {!selectedAdviser ? (
+                    <CButton color="primary" onClick={() => setModalVisible(true)}>
+                      Pick an Adviser
+                    </CButton>
+                  ) : (
+                    <div>
+                      <strong>Selected Adviser: </strong> {selectedAdviser}
+                      <CButton
+                        color="secondary"
+                        onClick={() => setModalVisible(true)}
+                        className="ms-3"
+                      >
                         Change Adviser
                       </CButton>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </CCardBody>
               </CCard>
             </CCol>
           </CRow>
-
-          {/* Client and Field Cards */}
           <CRow className="mb-3">
             <CCol md={6}>
               <CCard>
@@ -145,7 +210,7 @@ const GroupDetails = () => {
                   <strong>Client</strong>
                 </CCardHeader>
                 <CCardBody>
-                  <span>{group.client}</span>
+                  <span>{group.client || 'No client specified'}</span>
                 </CCardBody>
               </CCard>
             </CCol>
@@ -156,7 +221,7 @@ const GroupDetails = () => {
                   <strong>Field</strong>
                 </CCardHeader>
                 <CCardBody>
-                  <span>{group.field}</span>
+                  <span>{group.field || 'No field specified'}</span>
                 </CCardBody>
               </CCard>
             </CCol>
@@ -164,17 +229,16 @@ const GroupDetails = () => {
         </CCol>
       </CRow>
 
-      {/* Modal for Adviser Selection */}
       <CModal visible={modalVisible} onClose={() => setModalVisible(false)}>
         <CModalHeader>
-          <strong>Select Adviser</strong>
+          <CModalTitle>Select an Adviser</CModalTitle>
         </CModalHeader>
         <CModalBody>
           <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-            {advisersList.map((adviser, index) => (
-              <li key={index} style={{ marginBottom: '10px' }}>
-                <CButton color="secondary" onClick={() => handleAdviserChange(adviser)}>
-                  {adviser}
+            {adviserList.map((adviser) => (
+              <li key={adviser.id} style={{ marginBottom: '10px' }}>
+                <CButton color="link" onClick={() => handleAdviserSelect(adviser.name)}>
+                  {adviser.name}
                 </CButton>
               </li>
             ))}
@@ -191,37 +255,3 @@ const GroupDetails = () => {
 }
 
 export default GroupDetails
-
-// Inline CSS
-const styles = {
-  membersList: {
-    listStyleType: 'none',
-    paddingLeft: 0,
-  },
-  memberItem: {
-    marginBottom: '10px',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  memberImage: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    backgroundColor: '#ddd',
-    marginRight: '10px',
-  },
-  thesisInfo: {
-    marginBottom: '10px',
-  },
-  adviserSection: {
-    display: 'flex',
-    justifyContent: 'space-between',
-  },
-  adviserList: {
-    listStyleType: 'none',
-    paddingLeft: 0,
-  },
-  adviserItem: {
-    marginBottom: '10px',
-  },
-}
