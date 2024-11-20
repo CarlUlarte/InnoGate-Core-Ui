@@ -281,13 +281,21 @@ const UploadManuscript = () => {
                 <input {...getInputProps()} />
                 {isDragActive ? (
                   <p className="d-flex align-items-center justify-content-center flex-column">
-                    <CIcon icon={cilDataTransferUp} size="3xl" />
+                    <img
+                      src="src/assets/images/upload.png"
+                      alt="upload"
+                      style={{ width: '80px', marginBottom: '10px' }}
+                    />
                     Drag and Drop here <br /> or <br />
                     <span style={{ color: 'blue', cursor: 'pointer' }}>Browse files</span>
                   </p>
                 ) : (
                   <p className="d-flex align-items-center justify-content-center flex-column">
-                    <CIcon icon={cilDataTransferUp} size="3xl" />
+                    <img
+                      src="src/assets/images/upload.png"
+                      alt="upload"
+                      style={{ width: '80px', marginBottom: '10px' }}
+                    />
                     Drag and Drop here <br /> or <br />
                     <span style={{ color: 'blue', cursor: 'pointer' }}>Browse files</span>
                   </p>
