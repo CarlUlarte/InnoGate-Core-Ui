@@ -63,38 +63,41 @@ const ThesisProposal = () => {
   // Fetch proposals from Firestore when the component mounts
   useEffect(() => {
     const fetchProposals = async () => {
-      if (!userGroupID) return
-      const querySnapshot = await getDocs(collection(db, 'proposals'))
-      const proposalsData = []
+      if (!userGroupID) return;
+      const querySnapshot = await getDocs(collection(db, 'proposals'));
+      const proposalsData = [];
       querySnapshot.forEach((doc) => {
-        const data = doc.data()
+        const data = doc.data();
         if (data.groupID === userGroupID) {
-          proposalsData.push({ 
-            id: doc.id, 
+          proposalsData.push({
+            id: doc.id,
             ...data,
-            // Make form editable if it needs revision or isn't rejected
-            editable: data.status === 'needs_revision' || (data.status !== 'rejected' && !data.submitted)
-          })
+            editable: data.status === 'needs_revision' || (data.status !== 'rejected' && !data.submitted),
+          });
         }
-      })
-      setForms(proposalsData)
-    }
-  
-    fetchProposals()
-  }, [userGroupID])
+      });
+      setForms(proposalsData);
+    };
+
+    fetchProposals();
+  }, [userGroupID]);
+
+  // Function to determine visibility based on the proposal's status
+  const isVisible = (status) => {
+    return status === 'approved';
+  };
 
   const getLoadingState = (index) => {
-    return loadingStates[index] || false // Default to false if not set
-  }
+    return loadingStates[index] || false; // Default to false if not set
+  };
 
   const getFileUploadingState = (index) => {
-    return fileUploadingStates[index] || false // Default to false if not set
-  }
+    return fileUploadingStates[index] || false; // Default to false if not set
+  };
 
-
-const isFormEditable = (form) => {
-  return form.status === 'needs_revision' || (form.status !== 'rejected' && !form.submitted)
-}
+  const isFormEditable = (form) => {
+    return form.status === 'needs_revision' || (form.status !== 'rejected' && !form.submitted);
+  };
 
   // Firestore submission logic
   const handleSubmit = async () => {
@@ -316,53 +319,73 @@ const isFormEditable = (form) => {
         return {
           borderColor: '#dc3545',
           borderWidth: '2px',
-          backgroundColor: '#ffebee'
-        }
+          backgroundColor: '#ffebee',
+        };
+      case 'approved':
+        return {
+          borderColor: '#28a745',
+          borderWidth: '2px',
+          backgroundColor: '#e9fbe9',
+        };
       default:
-        return {}
+        return {};
     }
-  }
+  };
+  
 
   // Update the render forms function
   const renderForms = () => {
+    // Filter out rejected proposals
+    const filteredForms = forms.filter(form => form.status !== 'rejected');
+  
     return (
       <TransitionGroup>
-        {forms.map((form, index) => (
+        {filteredForms.map((form, index) => (
           <CSSTransition key={index} timeout={500} classNames="fade">
             <CCol xs={12}>
               <CCard className="mb-4" style={getCardStyle(form.status)}>
                 <CCardHeader>
                   <strong>Thesis Proposal Form {index + 1}</strong>
+                  {form.status === 'approved' && (
+                    <span className="ms-2 text-success">(APPROVED)</span>
+                  )}
                   {form.status === 'rejected' && (
                     <span className="ms-2 text-danger">(REJECTED)</span>
                   )}
                 </CCardHeader>
                 <CCardBody>
                   <CForm>
-
-                  {form.status === 'needs_revision' && (
-                    <div className="alert alert-warning mb-3">
-                      <strong>Revision Required</strong>
-                      <p>Teacher's Comments: {form.teacherComment}</p>
-                   </div>
+                    {/* Show approval message */}
+                    {form.status === 'approved' && (
+                      <div className="alert alert-success mb-3">
+                        This proposal has been approved by your teacher.
+                      </div>
                     )}
+  
                     {/* Status message for rejected proposals */}
                     {form.status === 'rejected' && (
                       <div className="alert alert-danger mb-3">
                         This proposal has been rejected. Please create a new proposal.
                       </div>
                     )}
-
+  
+                    {form.status === 'needs_revision' && (
+                      <div className="alert alert-warning mb-3">
+                        <strong>Revision Required</strong>
+                        <p>Teacher's Comments: {form.teacherComment}</p>
+                      </div>
+                    )}
+  
+                    {/* Title Field */}
                     <div className="mb-3">
                       <CFormLabel>Title</CFormLabel>
                       <CFormInput
                         value={form.title}
                         onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
                         disabled={!form.editable || form.status === 'rejected'}
-                        className={form.status === 'rejected' ? 'bg-light' : ''}
                       />
                     </div>
-
+  
                     {/* Description Field */}
                     <div className="mb-3">
                       <CFormLabel>Description</CFormLabel>
