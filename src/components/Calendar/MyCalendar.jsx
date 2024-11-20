@@ -1,96 +1,78 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-// import './calendar.module.css'
-import EventModal from './EventModal'
+import { CButton } from '@coreui/react' // CoreUI Button
+import { cilArrowLeft, cilArrowRight } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
 
 const localizer = momentLocalizer(moment)
 
-export default function MyCalendar({ selectable, size, showAddButton, isAdmin }) {
-  console.log('showAddButton:', showAddButton)
-  const [events, setEvents] = useState([])
-  const [showModal, setShowModal] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(null)
-
-  const handleSelectSlot = ({ start, end }) => {
-    setShowModal(true)
-    setSelectedDate(start)
-    setSelectedEvent(null)
+// Custom Toolbar Component
+const CustomToolbar = (toolbar) => {
+  const goToBack = () => {
+    toolbar.onNavigate('PREV')
   }
 
-  const handleSelectFAB = ({ start, end }) => {
-    setShowModal(true)
-    setSelectedDate(start)
-    setSelectedEvent(null)
+  const goToNext = () => {
+    toolbar.onNavigate('NEXT')
   }
 
-  const handleSelectEvent = (event) => {
-    setShowModal(true)
-    setSelectedEvent(event)
+  const goToCurrent = () => {
+    toolbar.onNavigate('TODAY')
   }
-
-  const saveEvent = (newEvent) => {
-    if (selectedEvent) {
-      const updatedEvents = events.map((e) => (e.id === selectedEvent.id ? newEvent : e))
-      setEvents(updatedEvents)
-    } else {
-      setEvents([...events, newEvent])
-    }
-    setShowModal(false)
-  }
-
-  const deleteEvent = (eventToDelete) => {
-    const updatedEvents = events.filter((e) => e.id !== eventToDelete.id)
-    setEvents(updatedEvents)
-    setShowModal(false)
-  }
-
-  const calendarStyle = {
-    width: size == 'admin' ? '1100px' : '1200px',
-    height: size == 'admin' ? '500px' : '600px',
-    border: '1px pink',
-    padding: '10px',
-  }
-
-  // const events = [
-  //   {
-  //     id: 1,
-  //     title: "Meeting",
-  //     start: new Date(2024, 4, 10, 10, 0),
-  //     end: new Date(2024, 4, 10, 12, 0),
-  //     color: "red", // optional: you can customize event colors
-  //   },
-  // ];
 
   return (
-    <>
+    <div
+      className="rbc-toolbar"
+      style={{ display: 'flex', justifyContent: 'space-between', padding: '10px' }}
+    >
+      {/* Month label on the left */}
+      <span
+        className="rbc-toolbar-label"
+        style={{
+          fontSize: '30px',
+          fontWeight: 'bold',
+          textAlign: 'left',
+          color: 'var(--cui-button-color)',
+        }}
+      >
+        {toolbar.label}
+      </span>
+
+      {/* Navigation buttons on the right */}
+      <div>
+        <CButton onClick={goToBack} style={{ marginRight: '10px' }} className="calendar-button">
+          <CIcon size="sm" icon={cilArrowLeft} style={{ marginRight: '3px' }} />
+          <span>Back</span>
+        </CButton>
+        <CButton onClick={goToCurrent} style={{ marginRight: '10px' }} className="calendar-button">
+          Today
+        </CButton>
+        <CButton onClick={goToNext} className="calendar-button">
+          Next
+          <CIcon size="sm" icon={cilArrowRight} style={{ marginLeft: '3px' }} />
+        </CButton>
+      </div>
+    </div>
+  )
+}
+
+const MyCalendar = ({ events }) => {
+  return (
+    <div style={{ height: '75vh' }}>
       <Calendar
         localizer={localizer}
         events={events}
-        startAccessor="start"
-        endAccessor="end"
-        selectable={selectable}
-        onSelectSlot={handleSelectSlot}
-        onSelectEvent={isAdmin ? handleSelectEvent : undefined}
-        style={calendarStyle}
+        defaultView="month"
+        views={['month']}
+        components={{
+          toolbar: CustomToolbar, // Use the custom toolbar
+        }}
+        style={{ height: '100%' }}
       />
-      <EventModal
-        isOpen={showModal}
-        onRequestClose={() => setShowModal(false)}
-        event={selectedEvent}
-        selectedDate={selectedDate}
-        saveEvent={saveEvent}
-        deleteEvent={deleteEvent}
-        existingGroups={events.map((event) => event.group)}
-        existingRooms={events.map((event) => event.room)}
-      />
-      {showAddButton && (
-        <button className="add-button" onClick={handleSelectFAB}>
-          +
-        </button>
-      )}
-    </>
+    </div>
   )
 }
+
+export default MyCalendar
