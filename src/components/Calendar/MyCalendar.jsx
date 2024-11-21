@@ -1,14 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { CButton } from '@coreui/react' // CoreUI Button
 import { cilArrowLeft, cilArrowRight } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
+import EventModal from './EventModal' // Import your EventModal
 
 const localizer = momentLocalizer(moment)
 
-// Custom Toolbar Component
 const CustomToolbar = (toolbar) => {
   const goToBack = () => {
     toolbar.onNavigate('PREV')
@@ -27,7 +27,6 @@ const CustomToolbar = (toolbar) => {
       className="rbc-toolbar"
       style={{ display: 'flex', justifyContent: 'space-between', padding: '10px' }}
     >
-      {/* Month label on the left */}
       <span
         className="rbc-toolbar-label"
         style={{
@@ -39,8 +38,6 @@ const CustomToolbar = (toolbar) => {
       >
         {toolbar.label}
       </span>
-
-      {/* Navigation buttons on the right */}
       <div>
         <CButton onClick={goToBack} style={{ marginRight: '10px' }} className="calendar-button">
           <CIcon size="sm" icon={cilArrowLeft} style={{ marginRight: '3px' }} />
@@ -59,17 +56,52 @@ const CustomToolbar = (toolbar) => {
 }
 
 const MyCalendar = ({ events }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [allEvents, setAllEvents] = useState(events || [])
+
+  const handleSelectSlot = (slotInfo) => {
+    setSelectedDate(slotInfo.start) // Pass the selected date to the modal
+    setIsModalOpen(true) // Open the modal
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedDate(null)
+  }
+
+  const saveEvent = (newEvent) => {
+    setAllEvents((prevEvents) => [...prevEvents, newEvent])
+    setIsModalOpen(false)
+  }
+
+  const deleteEvent = (eventToDelete) => {
+    setAllEvents((prevEvents) => prevEvents.filter((event) => event.id !== eventToDelete.id))
+    setIsModalOpen(false)
+  }
+
   return (
     <div style={{ height: '75vh' }}>
       <Calendar
         localizer={localizer}
-        events={events}
+        events={allEvents}
         defaultView="month"
         views={['month']}
         components={{
-          toolbar: CustomToolbar, // Use the custom toolbar
+          toolbar: CustomToolbar,
         }}
+        selectable
+        onSelectSlot={handleSelectSlot} // Handle date selection
         style={{ height: '100%' }}
+      />
+      <EventModal
+        isOpen={isModalOpen}
+        onRequestClose={handleCloseModal}
+        selectedDate={selectedDate}
+        saveEvent={saveEvent}
+        deleteEvent={deleteEvent}
+        existingGroups={allEvents.map((event) => event.group)} // Pass existing groups
+        existingRooms={allEvents.map((event) => event.room)} // Pass existing rooms
       />
     </div>
   )
