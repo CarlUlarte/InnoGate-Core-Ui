@@ -61,32 +61,52 @@ const ThesisProposal = () => {
     fetchUserDetails()
   }, [])
 
-  // Fetch proposals from Firestore when the component mounts
-  useEffect(() => {
-    const fetchProposals = async () => {
-      if (!userGroupID) return;
+// Fetch proposals from Firestore when the component mounts
+useEffect(() => {
+  const fetchProposals = async () => {
+    const user = auth.currentUser;
+    if (!user || !userGroupID) return;
+
+    try {
       const querySnapshot = await getDocs(collection(db, 'proposals'));
       const proposalsData = [];
+      
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        // Include ALL proposals for the user's group
         if (data.groupID === userGroupID) {
           proposalsData.push({
             id: doc.id,
             ...data,
-            editable: data.status === 'needs_revision' || (data.status !== 'rejected' && !data.submitted),
+            // All group members can edit if the proposal is not final
+            editable: data.status === 'needs_revision' || 
+                      (!data.submitted && data.status !== 'rejected'),
           });
         }
       });
+
+      // Sort proposals to ensure consistent order
+      proposalsData.sort((a, b) => {
+        // Prioritize forms that need revision or are in draft state
+        if (a.status === 'needs_revision') return -1;
+        if (b.status === 'needs_revision') return 1;
+        if (!a.submitted) return -1;
+        if (!b.submitted) return 1;
+        return 0;
+      });
+
       setForms(proposalsData);
-    };
-
-    fetchProposals();
-  }, [userGroupID]);
-
-  // Function to determine visibility based on the proposal's status
-  const isVisible = (status) => {
-    return status === 'approved';
+    } catch (error) {
+      console.error("Error fetching proposals:", error);
+      setToast({
+        color: 'danger',
+        message: 'Error fetching proposals',
+      });
+    }
   };
+
+  fetchProposals();
+}, [userGroupID]);
 
   const getLoadingState = (index) => {
     return loadingStates[index] || false; // Default to false if not set
@@ -244,19 +264,26 @@ const ThesisProposal = () => {
     try {
       setLoadingStates((prevStates) => ({ ...prevStates, [index]: true }))
       
+      // Create an update object that only includes defined fields
+      const updateData = {
+        title: form.title,
+        description: form.description,
+        client: form.client,
+        field: form.field,
+        abstractForm: form.abstractForm,
+        status: form.status === 'needs_revision' ? 'pending' : form.status,
+        groupID: userGroupID,
+        lastUpdated: new Date().toISOString()
+      }
+  
+      // Only add teacherComment if it exists
+      if (form.teacherComment !== undefined) {
+        updateData.teacherComment = form.status === 'needs_revision' ? '' : form.teacherComment
+      }
+      
       if (form.id) {
         const proposalRef = doc(db, 'proposals', form.id)
-        await updateDoc(proposalRef, {
-          title: form.title,
-          description: form.description,
-          client: form.client,
-          field: form.field,
-          abstractForm: form.abstractForm,
-          status: form.status === 'needs_revision' ? 'pending' : form.status,
-          teacherComment: form.status === 'needs_revision' ? '' : form.teacherComment,
-          groupID: userGroupID,
-          lastUpdated: new Date().toISOString()
-        })
+        await updateDoc(proposalRef, updateData)
   
         setForms((prevForms) => {
           const updatedForms = [...prevForms]
@@ -269,31 +296,26 @@ const ThesisProposal = () => {
           }
           return updatedForms
         })
-
+  
         setToast({
           color: 'success',
           message: form.status === 'needs_revision' ? 'Revision saved successfully!' : 'Proposal saved successfully!',
         })
         
       } else {
+        // Similar modification for addDoc
         const newDoc = await addDoc(collection(db, 'proposals'), {
-          title: form.title,
-          description: form.description,
-          client: form.client,
-          field: form.field,
-          abstractForm: form.abstractForm,
-          groupID: userGroupID,
+          ...updateData,
           submitted: false,
-          status: 'draft',
-          lastUpdated: new Date().toISOString()
+          status: 'draft'
         })
-
+  
         setForms((prevForms) =>
           prevForms.map((item, idx) =>
             idx === index ? { ...item, id: newDoc.id, editable: false, status: 'draft' } : item,
           ),
         )
-
+  
         setToast({
           color: 'success',
           message: 'New proposal saved successfully!',
@@ -322,7 +344,7 @@ const ThesisProposal = () => {
           borderWidth: '2px',
           backgroundColor: '#ffebee',
         };
-      case 'approved':
+      case 'accepted':
         return {
           borderColor: '#28a745',
           borderWidth: '2px',
@@ -336,187 +358,193 @@ const ThesisProposal = () => {
 
   // Update the render forms function
   const renderForms = () => {
-    // Filter out rejected proposals
-    const filteredForms = forms.filter(form => form.status !== 'rejected');
-  
     return (
       <TransitionGroup>
-        {filteredForms.map((form, index) => (
+        {forms.map((form, index) => (
           <CSSTransition key={index} timeout={500} classNames="fade">
             <CCol xs={12}>
               <CCard className="mb-4" style={getCardStyle(form.status)}>
                 <CCardHeader>
                   <strong>Thesis Proposal Form {index + 1}</strong>
                   {form.status === 'approved' && (
-                    <span className="ms-2 text-success">(APPROVED)</span>
+                    <span className="ms-2 text-success">
+                      <CIcon icon={cilCheckCircle} className="me-1" />
+                      (APPROVED)
+                    </span>
                   )}
                   {form.status === 'rejected' && (
                     <span className="ms-2 text-danger">(REJECTED)</span>
                   )}
                 </CCardHeader>
                 <CCardBody>
-                  <CForm>
-                    {/* Show approval message */}
-                    {form.status === 'approved' && (
-                      <div className="alert alert-success mb-3">
-                        This proposal has been approved by your teacher.
-                      </div>
-                    )}
-  
-                    {/* Status message for rejected proposals */}
-                    {form.status === 'rejected' && (
-                      <div className="alert alert-danger mb-3">
-                        This proposal has been rejected. Please create a new proposal.
-                      </div>
-                    )}
-  
-                    {form.status === 'needs_revision' && (
-                      <div className="alert alert-warning mb-3">
-                        <strong>Revision Required</strong>
-                        <p>Teacher's Comments: {form.teacherComment}</p>
-                      </div>
-                    )}
-  
-                    {/* Title Field */}
-                    <div className="mb-3">
-                      <CFormLabel>Title</CFormLabel>
-                      <CFormInput
-                        value={form.title}
-                        onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
-                        disabled={!form.editable || form.status === 'rejected'}
-                      />
+                  {/* Show approval message */}
+                  {form.status === 'accepted' && (
+                    <div className="alert alert-success mb-3">
+                      ✅ Proposal Accepted .
                     </div>
-  
-                    {/* Description Field */}
-                    <div className="mb-3">
-                      <CFormLabel>Description</CFormLabel>
-                      <CFormTextarea
-                        rows={3}
-                        value={form.description}
-                        onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
-                        disabled={!form.editable || form.status === 'rejected'}
-                        className={form.status === 'rejected' ? 'bg-light' : ''}
-                      />
+                  )}
+
+                  {/* Status message for rejected proposals */}
+                  {form.status === 'rejected' && (
+                    <div className="alert alert-danger mb-3">
+                      ❌ This proposal has been rejected.
                     </div>
+                  )}
 
-                    <CRow>
-                      <CCol md={4}>
-                        <div className="mb-3">
-                          <CFormLabel>Client</CFormLabel>
-                          <CFormInput
-                            value={form.client}
-                            onChange={(e) => handleFieldChange(index, 'client', e.target.value)}
-                            disabled={!form.editable || form.status === 'rejected'}
-                            className={form.status === 'rejected' ? 'bg-light' : ''}
-                          />
-                        </div>
-                      </CCol>
+                  {form.status === 'needs_revision' && (
+                    <div className="alert alert-warning mb-3">
+                      <strong>🔄 Revision Required</strong>
+                      <p>Teacher's Comments: {form.teacherComment}</p>
+                    </div>
+                  )}
 
-                      <CCol md={4}>
-                        <div className="mb-3">
-                          <CFormLabel>Field</CFormLabel>
-                          <CFormSelect
-                            value={form.field}
-                            onChange={(e) => handleFieldChange(index, 'field', e.target.value)}
-                            disabled={!form.editable || form.status === 'rejected'}
-                            className={form.status === 'rejected' ? 'bg-light' : ''}
-                          >
-                            <option value="">Select Field</option>
-                            <option value="field1">Field 1</option>
-                            <option value="field2">Field 2</option>
-                            <option value="field3">Field 3</option>
-                            <option value="field4">Field 4</option>
-                          </CFormSelect>
-                        </div>
-                      </CCol>
+                  {/* Rest of the form remains the same */}
+                  
+                  {/* Title Field */}
+                  <div className="mb-3">
+                    <CFormLabel>Title</CFormLabel>
+                    <CFormInput
+                      value={form.title}
+                      onChange={(e) => handleFieldChange(index, 'title', e.target.value)}
+                      disabled={!form.editable || form.status === 'rejected'}
+                    />
+                  </div>
 
-                      <CCol md={4}>
-                        <div className="mb-3">
-                          <CFormLabel>Abstract Form</CFormLabel>
-                          <div className="custom-file-upload">
-                            {getFileUploadingState(index) ? (
-                              <div className="d-flex align-items-center">
-                                <CSpinner size="sm" className="me-2" />
-                                <span>Uploading...</span>
-                              </div>
-                            ) : (
-                              <>
-                                <input
-                                  type="file"
-                                  id={`fileInput-${index}`}
-                                  onChange={(e) => handleFileChange(e, index)}
-                                  style={{ display: 'none' }}
-                                  disabled={form.status === 'rejected'}
-                                />
-                                <CButton
-                                  className="w-100"
-                                  color="secondary"
-                                  variant="outline"
-                                  onClick={() => document.getElementById(`fileInput-${index}`).click()}
-                                  disabled={!form.editable || form.status === 'rejected'}
-                                >
-                                  {form.abstractForm ? 'Change File' : 'Upload File'}
-                                </CButton>
-                                {form.abstractForm && (
-                                  <small className="text-secondary ms-2">File Uploaded!</small>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </CCol>
-                    </CRow>
+                  {/* Description Field */}
+                  <div className="mb-3">
+                    <CFormLabel>Description</CFormLabel>
+                    <CFormTextarea
+                      rows={3}
+                      value={form.description}
+                      onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
+                      disabled={!form.editable || form.status === 'rejected'}
+                      className={form.status === 'rejected' ? 'bg-light' : ''}
+                    />
+                  </div>
 
-                    {/* Buttons */}
-                    <CRow className="mt-3">
-                      <CCol className="d-flex justify-content-end">
-                        {/* Show Edit/Save and Submit buttons if:
-                            1. Form needs revision OR
-                            2. Form is not submitted AND not rejected */}
-                        {(form.status === 'needs_revision' || (!form.submitted && form.status !== 'rejected')) ? (
-                          <>
-                            {form.editable ? (
+                  {/* Rest of the form remains the same */}
+                  <CRow>
+                    <CCol md={4}>
+                      <div className="mb-3">
+                        <CFormLabel>Client</CFormLabel>
+                        <CFormInput
+                          value={form.client}
+                          onChange={(e) => handleFieldChange(index, 'client', e.target.value)}
+                          disabled={!form.editable || form.status === 'rejected'}
+                          className={form.status === 'rejected' ? 'bg-light' : ''}
+                        />
+                      </div>
+                    </CCol>
+
+                    <CCol md={4}>
+                      <div className="mb-3">
+                        <CFormLabel>Field</CFormLabel>
+                        <CFormSelect
+                          value={form.field}
+                          onChange={(e) => handleFieldChange(index, 'field', e.target.value)}
+                          disabled={!form.editable || form.status === 'rejected'}
+                          className={form.status === 'rejected' ? 'bg-light' : ''}
+                        >
+                          <option value="">Select Field</option>
+                          <option value="field1">Field 1</option>
+                          <option value="field2">Field 2</option>
+                          <option value="field3">Field 3</option>
+                          <option value="field4">Field 4</option>
+                        </CFormSelect>
+                      </div>
+                    </CCol>
+
+                    <CCol md={4}>
+                      <div className="mb-3">
+                        <CFormLabel>Abstract Form</CFormLabel>
+                        <div className="custom-file-upload">
+                          {getFileUploadingState(index) ? (
+                            <div className="d-flex align-items-center">
+                              <CSpinner size="sm" className="me-2" />
+                              <span>Uploading...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <input
+                                type="file"
+                                id={`fileInput-${index}`}
+                                onChange={(e) => handleFileChange(e, index)}
+                                style={{ display: 'none' }}
+                                disabled={form.status === 'rejected'}
+                              />
                               <CButton
-                                style={{ marginRight: '10px' }}
-                                color="success"
-                                onClick={() => handleSave(index)}
+                                className="w-100"
+                                color="secondary"
+                                variant="outline"
+                                onClick={() => document.getElementById(`fileInput-${index}`).click()}
+                                disabled={!form.editable || form.status === 'rejected'}
                               >
-                                {getLoadingState(index) ? (
-                                  <>
-                                    <CSpinner size="sm" /> Save
-                                  </>
-                                ) : (
-                                  'Save'
-                                )}
+                                {form.abstractForm ? 'Change File' : 'Upload File'}
                               </CButton>
-                            ) : (
-                              <CButton
-                                style={{ marginRight: '10px' }}
-                                color="primary"
-                                onClick={() => handleEdit(index)}
-                              >
-                                Edit
-                              </CButton>
-                            )}
+                              {form.abstractForm && (
+                                <small className="text-secondary ms-2">File Uploaded!</small>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </CCol>
+                  </CRow>
+
+                  {/* Buttons */}
+                  
+                  <CRow className="mt-3">
+                    <CCol className="d-flex justify-content-end">
+                    {form.status === 'approved' ? (
+                        <CButton color="success" disabled>
+                          <CIcon icon={cilCheckCircle} className="me-1" />
+                          Approved
+                        </CButton>
+                      ) : 
+                      // Existing button logic for other statuses
+                      (form.status === 'needs_revision' || (!form.submitted && form.status !== 'rejected')) ? (
+                        <>
+                          {form.editable ? (
                             <CButton
-                              color="primary"
-                              onClick={() => openConfirmModal(index)}
-                              disabled={submittingIndex === index}
+                              style={{ marginRight: '10px' }}
+                              color="success"
+                              onClick={() => handleSave(index)}
                             >
-                              {form.status === 'needs_revision' ? 'Submit Revision' : 'Submit'}
+                              {getLoadingState(index) ? (
+                                <>
+                                  <CSpinner size="sm" /> Save
+                                </>
+                              ) : (
+                                'Save'
+                              )}
                             </CButton>
-                          </>
-                        ) : (
+                          ) : (
+                            <CButton
+                              style={{ marginRight: '10px' }}
+                              color="primary"
+                              onClick={() => handleEdit(index)}
+                            >
+                              Edit
+                            </CButton>
+                          )}
+                          <CButton
+                            color="primary"
+                            onClick={() => openConfirmModal(index)}
+                            disabled={submittingIndex === index}
+                          >
+                            {form.status === 'needs_revision' ? 'Submit Revision' : 'Submit'}
+                          </CButton>
+                        </>
+                      ) : (
                           <CButton color="secondary" disabled>
                             {form.status === 'rejected' ? 'Rejected' : 
                             form.status === 'pending' ? 'Pending Review' : 
+                            form.status === 'accepted' ? 'Approved' : 
                             'Submitted'}
                           </CButton>
-                        )}
-                      </CCol>
-                    </CRow>
-
-                  </CForm>
+                      )}
+                    </CCol>
+                  </CRow>
                 </CCardBody>
               </CCard>
             </CCol>

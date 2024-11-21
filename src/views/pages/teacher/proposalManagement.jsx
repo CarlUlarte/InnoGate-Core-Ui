@@ -23,7 +23,7 @@ import { collection, getDocs, doc, updateDoc } from 'firebase/firestore'
 import CustomToast from 'src/components/Toast/CustomToast'
 
 const ProposalManagement = () => {
-  const [selectedGroup, setSelectedGroup] = useState('group1') // Default group
+  const [selectedGroup, setSelectedGroup] = useState('CICS') // Default group
   const [proposalsByGroup, setProposalsByGroup] = useState({})
   const [toast, setToast] = useState(null)
   const [revisionModal, setRevisionModal] = useState(false)
@@ -62,6 +62,36 @@ const ProposalManagement = () => {
 
     fetchProposals()
   }, [])
+
+    // Status color and text mapping
+    const getStatusStyle = (status) => {
+      switch (status) {
+        case 'accepted':
+          return {
+            color: 'green',
+            text: 'Approved',
+            backgroundColor: 'rgba(0, 255, 0, 0.1)'
+          }
+        case 'rejected':
+          return {
+            color: 'red',
+            text: 'Rejected',
+            backgroundColor: 'rgba(255, 0, 0, 0.1)'
+          }
+        case 'needs_revision':
+          return {
+            color: 'orange',
+            text: 'Needs Revision',
+            backgroundColor: 'rgba(255, 165, 0, 0.1)'
+          }
+        default:
+          return {
+            color: 'black',
+            text: 'Pending',
+            backgroundColor: 'transparent'
+          }
+      }
+    }
 
   const handleGroupClick = (groupID) => {
     setSelectedGroup(groupID)
@@ -255,6 +285,22 @@ const ProposalManagement = () => {
                   }}
                 >
                   <CCardBody>
+                    {/* Status Indicator */}
+                    {proposal.status && (
+                      <div 
+                        style={{
+                          position: 'absolute', 
+                          top: '10px', 
+                          right: '10px', 
+                          padding: '5px 10px',
+                          borderRadius: '4px',
+                          ...getStatusStyle(proposal.status)
+                        }}
+                      >
+                        {getStatusStyle(proposal.status).text}
+                      </div>
+                    )}
+
                     <CRow>
                       <CCol md={8}>
                         <h2>{proposal.title}</h2>
@@ -290,7 +336,7 @@ const ProposalManagement = () => {
                           </CButton>
                           <CButton
                             color="warning"
-                            onClick={() => handleRevise(proposal)} // Pass the whole proposal object
+                            onClick={() => handleRevise(proposal)}
                             className="mx-1"
                           >
                             <CIcon icon={cilSync} className="me-2" />
@@ -326,7 +372,7 @@ const ProposalManagement = () => {
           )}
         </CCardBody>
       </CCard>
-      {/* Revision Modal */}
+      {/* Revision Modal and other components remain the same */}
       <CModal visible={revisionModal} onClose={() => setRevisionModal(false)}>
         <CModalHeader>
           <CModalTitle>Request Revision</CModalTitle>
@@ -349,7 +395,7 @@ const ProposalManagement = () => {
           </CButton>
         </CModalFooter>
       </CModal>
-      <CustomToast toast={toast} setToast={setToast} /> {/* Added CustomToast */}
+      <CustomToast toast={toast} setToast={setToast} />
     </CContainer>
   )
 }
