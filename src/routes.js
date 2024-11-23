@@ -16,7 +16,6 @@ const MyStudents = React.lazy(() => import('./views/pages/teacher/myStudents'))
 // Adviser
 const ScheduleAdviser = React.lazy(() => import('./views/pages/adviser/schedule/scheduleAdviser'))
 const EditProfileAdviser = React.lazy(() => import('./views/pages/adviser/editProfileAdviser'))
-const ManageGroup = React.lazy(() => import('./views/pages/adviser/manageGroup'))
 const GroupRequest = React.lazy(() => import('./views/pages/adviser/groupRequest'))
 const ViewManuscript = React.lazy(() => import('./views/pages/adviser/viewManuscript'))
 
@@ -87,7 +86,6 @@ const routes = [
     element: EditProfileAdviser,
     allowedRoles: ['Adviser'],
   },
-  { path: '/manageGroup', name: 'manageGroup', element: ManageGroup, allowedRoles: ['Adviser'] },
   { path: '/groupRequest', name: 'groupRequest', element: GroupRequest, allowedRoles: ['Adviser'] },
   {
     path: '/viewManuscript',

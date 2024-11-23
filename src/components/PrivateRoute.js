@@ -7,7 +7,6 @@ const roleBasedRoutes = {
   '/scheduleAdviser': ['Adviser', 'Admin'],
   '/groupRequest': ['Adviser'],
   '/viewManuscript': ['Adviser'],
-  '/manageGroup': ['Adviser'],
   '/editProfileAdviser': ['Adviser'],
 
   '/scheduleTeacher': ['Teacher', 'Admin'],

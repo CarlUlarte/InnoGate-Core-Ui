@@ -102,12 +102,6 @@ const HeaderSearchBar = () => {
       description: 'View thesis manuscripts',
       roles: ['Adviser'],
     },
-    {
-      name: 'Manage Group',
-      path: '/manageGroup',
-      description: 'Manage your groups',
-      roles: ['Adviser'],
-    },
   ]
 
   const handleInputChange = (e) => {

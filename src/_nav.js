@@ -40,12 +40,6 @@ const _nav = () => {
     },
     {
       component: CNavItem,
-      name: 'Manage Group',
-      to: '/manageGroup',
-      icon: <CIcon icon={cilSpreadsheet} customClassName="nav-icon" />,
-    },
-    {
-      component: CNavItem,
       name: 'Edit Profile',
       to: '/editProfileAdviser',
       icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
