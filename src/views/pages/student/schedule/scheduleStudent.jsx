@@ -8,7 +8,7 @@ export default function schedule({ showAddButton }) {
     <>
       <CCard>
         <CCardBody>
-          <MyCalendar selectable={true} showAddButton={true} />
+          <MyCalendar selectable={false} showAddButton={false} />
         </CCardBody>
       </CCard>
     </>

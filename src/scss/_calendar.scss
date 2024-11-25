@@ -35,10 +35,18 @@
 .rbc-event {
   background-color: #3a506a; // Dark blue for event background
   color: #d1d1d1; // White text for contrast
-  font-weight: 700;
-  margin: auto;
-  width: 80%;
-  border-radius: 4px;
+  font-weight: 400;
+  font-size: 13px;
+  margin: 10px;
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
+}
+
+.rbc-event:hover {
+  transform: scale(1.05); /* Slightly enlarge the event on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Add a shadow for depth */
+  z-index: 1; /* Ensure the event appears above others */
 }
 
 .rbc-event.rbc-selected {
@@ -47,6 +55,7 @@
 
 .rbc-day-bg {
   background-color: var(--cui-body-bg); // Dark background for days
+  padding: 20px;
 }
 
 .rbc-row-bg {
@@ -91,6 +100,28 @@
   color: #ffffff; // White text for toolbar label
   font-weight: 600;
   margin: auto;
+}
+
+#boxes {
+  display: flex;
+  gap: 20px;
+  flex-direction: column;
+}
+
+#boxes p {
+  font-size: 18px;
+  margin-bottom: 30px;
+}
+#box {
+  border: 1px solid gray;
+  border-radius: 10px;
+  padding: 15px;
+}
+
+#box-2 {
+  border: 1px solid gray;
+  border-radius: 10px;
+  padding: 15px;
 }
 
 .add-button {
