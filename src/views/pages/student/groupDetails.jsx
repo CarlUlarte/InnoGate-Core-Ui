@@ -14,7 +14,7 @@ import {
   CModalBody,
   CModalFooter,
 } from '@coreui/react'
-import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from 'src/backend/firebase'
 
 const defaultProfilePic = 'src/assets/images/avatars/pic.png'
@@ -32,6 +32,30 @@ const GroupDetails = () => {
   const [modalVisible, setModalVisible] = useState(false)
   const [proposalId, setProposalId] = useState(null)
   const [groupID, setGroupID] = useState(null)
+  const [isRequestPending, setIsRequestPending] = useState(false)
+
+  useEffect(() => {
+    const checkPendingRequest = async () => {
+      if (!groupID) return;
+      
+      try {
+        const requestsRef = collection(db, 'adviserRequests')
+        const requestQuery = query(
+          requestsRef, 
+          where('groupID', '==', groupID),
+          where('status', '==', 'pending')
+        )
+        const requestSnapshot = await getDocs(requestQuery)
+        
+        setIsRequestPending(!requestSnapshot.empty)
+      } catch (error) {
+        console.error('Error checking pending requests:', error)
+      }
+    }
+
+    checkPendingRequest()
+  }, [groupID])
+
 
   // Fetch group and thesis details
   useEffect(() => {
@@ -126,10 +150,11 @@ const GroupDetails = () => {
 
         const advisers = adviserSnapshot.docs.map((doc) => ({
           id: doc.id,
+          uid: doc.data().uid,
           name: doc.data().name,
         }))
+        
 
-        console.log('Fetched advisers:', advisers)
         setAdviserList(advisers)
       } catch (error) {
         console.error('Error fetching advisers:', error)
@@ -141,34 +166,53 @@ const GroupDetails = () => {
     }
   }, [modalVisible])
 
-  const handleAdviserSelect = async (adviserName) => {
-    console.log('handleAdviserSelect called with adviser:', adviserName)
-    console.log('Current proposalId:', proposalId)
-    
-    if (!proposalId) {
-      console.error('No proposal ID found')
-      alert('Cannot assign adviser: No proposal found')
+  const handleAdviserSelect = async (adviser) => {
+    if (!groupID) {
+      console.error('No group ID found')
+      alert('Cannot send adviser request: No group found')
       return
     }
 
     try {
-      const proposalRef = doc(db, 'proposals', proposalId)
+      // Get the current proposal data
+      const proposalsRef = collection(db, 'proposals')
+      const proposalQuery = query(
+        proposalsRef,
+        where('groupID', '==', groupID),
+        where('status', '==', 'accepted')
+      )
+      const proposalSnapshot = await getDocs(proposalQuery)
       
-      console.log('Attempting to update proposal:', proposalId)
-      console.log('Update data:', { adviser: adviserName })
+      if (proposalSnapshot.empty) {
+        alert('No accepted proposal found for this group')
+        return
+      }
 
-      await updateDoc(proposalRef, {
-        adviser: adviserName,
-        lastUpdated: new Date().toISOString()
+      const proposalData = proposalSnapshot.docs[0].data()
+
+      // Create adviser request document
+      const requestsRef = collection(db, 'adviserRequests')
+      await addDoc(requestsRef, {
+        adviserUID: adviser.uid,
+        groupID: groupID,
+        status: 'pending',
+        timestamp: serverTimestamp(),
+        members: group.members,
+        approvedProposal: {
+          title: proposalData.title,
+          description: proposalData.description,
+          client: proposalData.client,
+          field: proposalData.field
+        }
       })
 
-      console.log('Successfully updated adviser')
-      setSelectedAdviser(adviserName)
+      setIsRequestPending(true)
       setModalVisible(false)
+      alert('Adviser request sent successfully!')
 
     } catch (error) {
-      console.error('Error updating adviser:', error)
-      alert('Failed to update adviser: ' + error.message)
+      console.error('Error sending adviser request:', error)
+      alert('Failed to send adviser request: ' + error.message)
     }
   }
 
@@ -282,28 +326,31 @@ const GroupDetails = () => {
         <CModalHeader>
           <CModalTitle>Select an Adviser</CModalTitle>
         </CModalHeader>
-        <CModalBody>
-          {adviserList.length > 0 ? (
-            <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-              {adviserList.map((adviser) => (
-                <li key={adviser.id} style={{ marginBottom: '10px' }}>
-                  <CButton
-                    color="primary"
-                    className="w-100 text-start"
-                    onClick={() => {
-                      console.log('Adviser button clicked:', adviser.name)
-                      handleAdviserSelect(adviser.name)
-                    }}
-                  >
-                    {adviser.name}
-                  </CButton>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No advisers available</p>
-          )}
-        </CModalBody>
+          <CModalBody>
+        {adviserList.length > 0 ? (
+          <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+            {adviserList.map((adviser) => (
+              <li key={adviser.id} style={{ marginBottom: '10px' }}>
+                <CButton
+                  color="primary"
+                  className="w-100 text-start"
+                  onClick={() => handleAdviserSelect(adviser)}
+                  disabled={isRequestPending}
+                >
+                  {adviser.name}
+                </CButton>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No advisers available</p>
+        )}
+        {isRequestPending && (
+          <div className="text-warning mt-3">
+            You have a pending adviser request. Please wait for a response before selecting another adviser.
+          </div>
+        )}
+      </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={() => setModalVisible(false)}>
             Close

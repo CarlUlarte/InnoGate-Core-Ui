@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   CCard,
   CCardBody,
@@ -18,43 +18,51 @@ import {
 } from '@coreui/react'
 import { cilCheckCircle, cilXCircle } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
+import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore'
+import { db, auth } from 'src/backend/firebase'
 
-const GroupRequestExample = () => {
-  const [groupRequests] = useState([
-    {
-      id: 'group1',
-      groupID: 'SWE-24-A',
-      members: [
-        { uid: '1', name: 'Alice Johnson', email: 'alice@example.com' },
-        { uid: '2', name: 'Bob Smith', email: 'bob@example.com' },
-        { uid: '3', name: 'Charlie Davis', email: 'charlie@example.com' }
-      ],
-      approvedProposal: {
-        title: 'AI-Powered Customer Support Chatbot',
-        description: 'Develop an advanced chatbot using natural language processing to improve customer service efficiency.',
-        client: 'TechCorp Solutions',
-        field: 'Artificial Intelligence'
-      }
-    },
-    {
-      id: 'group2',
-      groupID: 'SWE-24-B',
-      members: [
-        { uid: '4', name: 'Diana Wilson', email: 'diana@example.com' },
-        { uid: '5', name: 'Ethan Brown', email: 'ethan@example.com' }
-      ],
-      approvedProposal: {
-        title: 'Sustainable Energy Management Platform',
-        description: 'Create a web application to monitor and optimize energy consumption for businesses.',
-        client: 'GreenTech Innovations',
-        field: 'Sustainability'
-      }
-    }
-  ])
-
+const GroupRequest = () => {
+  const [groupRequests, setGroupRequests] = useState([])
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [confirmModal, setConfirmModal] = useState(false)
   const [modalAction, setModalAction] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch adviser requests on component mount
+  useEffect(() => {
+    const fetchAdviserRequests = async () => {
+      try {
+        const currentUser = auth.currentUser
+        if (!currentUser) {
+          console.log('No current user found')
+          return
+        }
+
+        const requestsRef = collection(db, 'adviserRequests')
+        const requestQuery = query(
+          requestsRef,
+          where('adviserUID', '==', currentUser.uid),
+          where('status', '==', 'pending')
+        )
+        const requestSnapshot = await getDocs(requestQuery)
+
+        const requests = requestSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate()
+        }))
+
+        console.log('Fetched requests:', requests)
+        setGroupRequests(requests)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching adviser requests:', error)
+        setLoading(false)
+      }
+    }
+
+    fetchAdviserRequests()
+  }, [])
 
   const handleGroupSelect = (group) => {
     setSelectedGroup(group)
@@ -65,10 +73,50 @@ const GroupRequestExample = () => {
     setConfirmModal(true)
   }
 
-  const handleGroupRequestResponse = () => {
-    // Simulated response handling
-    setConfirmModal(false)
-    setSelectedGroup(null)
+  const handleGroupRequestResponse = async (accepted) => {
+    if (!selectedGroup) return
+
+    try {
+      // Update the adviser request status
+      const requestRef = doc(db, 'adviserRequests', selectedGroup.id)
+      await updateDoc(requestRef, {
+        status: accepted ? 'accepted' : 'rejected',
+        responseTimestamp: new Date()
+      })
+
+      if (accepted) {
+        // Update the proposal with the adviser information
+        const proposalsRef = collection(db, 'proposals')
+        const proposalQuery = query(
+          proposalsRef,
+          where('groupID', '==', selectedGroup.groupID),
+          where('status', '==', 'accepted')
+        )
+        const proposalSnapshot = await getDocs(proposalQuery)
+
+        if (!proposalSnapshot.empty) {
+          const proposalDoc = proposalSnapshot.docs[0]
+          await updateDoc(doc(db, 'proposals', proposalDoc.id), {
+            adviser: auth.currentUser.displayName,
+            adviserUID: auth.currentUser.uid,
+            lastUpdated: new Date()
+          })
+        }
+      }
+
+      // Update local state to remove the processed request
+      setGroupRequests(prev => prev.filter(request => request.id !== selectedGroup.id))
+      setSelectedGroup(null)
+      setConfirmModal(false)
+
+    } catch (error) {
+      console.error('Error handling adviser request:', error)
+      alert('Failed to process request: ' + error.message)
+    }
+  }
+
+  if (loading) {
+    return <div>Loading requests...</div>
   }
 
   return (
@@ -80,17 +128,23 @@ const GroupRequestExample = () => {
         </CCardHeader>
         <CCardBody className="p-0">
           <CListGroup>
-            {groupRequests.map((request) => (
-              <CListGroupItem 
-                key={request.id}
-                onClick={() => handleGroupSelect(request)}
-                active={selectedGroup?.id === request.id}
-                color={selectedGroup?.id === request.id ? 'primary' : undefined}
-                className="py-2"
-              >
-                <small>{request.groupID}</small>
+            {groupRequests.length > 0 ? (
+              groupRequests.map((request) => (
+                <CListGroupItem 
+                  key={request.id}
+                  onClick={() => handleGroupSelect(request)}
+                  active={selectedGroup?.id === request.id}
+                  color={selectedGroup?.id === request.id ? 'primary' : undefined}
+                  className="py-2"
+                >
+                  <small>{request.groupID}</small>
+                </CListGroupItem>
+              ))
+            ) : (
+              <CListGroupItem className="py-2">
+                <small>No pending requests</small>
               </CListGroupItem>
-            ))}
+            )}
           </CListGroup>
         </CCardBody>
       </CCard>
@@ -105,7 +159,7 @@ const GroupRequestExample = () => {
           </h6>
         </CCardHeader>
         <CCardBody>
-          {selectedGroup && (
+          {selectedGroup ? (
             <div>
               {/* Group Members */}
               <CCard className="mb-3">
@@ -166,6 +220,10 @@ const GroupRequestExample = () => {
                 </CButton>
               </CButtonGroup>
             </div>
+          ) : (
+            <div className="text-center text-muted">
+              <p>Select a group request to view details</p>
+            </div>
           )}
         </CCardBody>
       </CCard>
@@ -191,7 +249,7 @@ const GroupRequestExample = () => {
           <CButton 
             size="sm"
             color={modalAction === 'accept' ? 'success' : 'danger'} 
-            onClick={handleGroupRequestResponse}
+            onClick={() => handleGroupRequestResponse(modalAction === 'accept')}
           >
             {modalAction === 'accept' ? 'Accept' : 'Reject'}
           </CButton>
@@ -201,4 +259,4 @@ const GroupRequestExample = () => {
   )
 }
 
-export default GroupRequestExample
+export default GroupRequest
