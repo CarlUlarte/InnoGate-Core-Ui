@@ -13,6 +13,7 @@ import {
   CModalTitle,
   CModalBody,
   CModalFooter,
+  CAlert
 } from '@coreui/react'
 import { collection, getDocs, query, where, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from 'src/backend/firebase'
@@ -28,25 +29,26 @@ const GroupDetails = () => {
     field: '',
   })
   const [adviserList, setAdviserList] = useState([])
-  const [selectedAdviser, setSelectedAdviser] = useState('')
+  const [selectedAdviser, setSelectedAdviser] = useState(null)
   const [modalVisible, setModalVisible] = useState(false)
-  const [proposalId, setProposalId] = useState(null)
   const [groupID, setGroupID] = useState(null)
+  const [adviserRejectionMessage, setAdviserRejectionMessage] = useState(null)
+  const [rejectedAdviserUIDs, setRejectedAdviserUIDs] = useState([])
   const [isRequestPending, setIsRequestPending] = useState(false)
 
   useEffect(() => {
     const checkPendingRequest = async () => {
-      if (!groupID) return;
-      
+      if (!groupID) return
+
       try {
         const requestsRef = collection(db, 'adviserRequests')
         const requestQuery = query(
-          requestsRef, 
+          requestsRef,
           where('groupID', '==', groupID),
           where('status', '==', 'pending')
         )
         const requestSnapshot = await getDocs(requestQuery)
-        
+
         setIsRequestPending(!requestSnapshot.empty)
       } catch (error) {
         console.error('Error checking pending requests:', error)
@@ -56,82 +58,56 @@ const GroupDetails = () => {
     checkPendingRequest()
   }, [groupID])
 
-
-  // Fetch group and thesis details
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
-        console.log('Starting to fetch group details...')
         const currentUser = auth.currentUser
-        if (!currentUser) {
-          console.log('No current user found')
-          return
-        }
+        if (!currentUser) return
 
-        // First, get the current user's group ID
         const usersRef = collection(db, 'users')
         const userQuery = query(usersRef, where('uid', '==', currentUser.uid))
         const userSnapshot = await getDocs(userQuery)
 
-        if (userSnapshot.empty) {
-          console.log('No user document found')
-          return
-        }
+        if (!userSnapshot.empty) {
+          const userData = userSnapshot.docs[0].data()
+          const userGroupID = userData.groupID
 
-        const userData = userSnapshot.docs[0].data()
-        const userGroupID = userData.groupID
+          if (userGroupID) {
+            setGroupID(userGroupID)
 
-        if (!userGroupID) {
-          console.log('User has no group ID')
-          return
-        }
+            const membersQuery = query(usersRef, where('groupID', '==', userGroupID))
+            const membersSnapshot = await getDocs(membersQuery)
 
-        console.log('Found group ID:', userGroupID)
-        setGroupID(userGroupID)
+            const members = membersSnapshot.docs.map(doc => ({
+              name: doc.data().name || 'Unknown Name',
+              email: doc.data().email || 'No Email',
+              role: doc.data().role || 'Unknown Role'
+            })).filter(member => member.role === 'Student')
 
-        // Fetch group members
-        const membersQuery = query(usersRef, where('groupID', '==', userGroupID))
-        const membersSnapshot = await getDocs(membersQuery)
-        
-        if (membersSnapshot.empty) {
-          console.log('No members found for group:', userGroupID)
-          return
-        }
+            const proposalsRef = collection(db, 'proposals')
+            const proposalQuery = query(
+              proposalsRef,
+              where('groupID', '==', userGroupID),
+              where('status', '==', 'accepted')
+            )
+            const proposalSnapshot = await getDocs(proposalQuery)
 
-        const members = membersSnapshot.docs.map(doc => {
-          const data = doc.data()
-          return {
-            name: data.name || 'Unknown Name',
-            email: data.email || 'No Email',
-            role: data.role || 'Unknown Role'
+            let proposalData = {}
+            if (!proposalSnapshot.empty) {
+              const proposal = proposalSnapshot.docs[0]
+              proposalData = proposal.data()
+              setSelectedAdviser(proposalData.adviser || '')
+            }
+
+            setGroup({
+              members,
+              thesisTitle: proposalData.title || '',
+              thesisDescription: proposalData.description || '',
+              client: proposalData.client || '',
+              field: proposalData.field || '',
+            })
           }
-        }).filter(member => member.role === 'Student')
-
-        // Fetch accepted proposal
-        const proposalsRef = collection(db, 'proposals')
-        const proposalQuery = query(
-          proposalsRef,
-          where('groupID', '==', userGroupID),
-          where('status', '==', 'accepted')
-        )
-        const proposalSnapshot = await getDocs(proposalQuery)
-
-        let proposalData = {}
-        if (!proposalSnapshot.empty) {
-          const proposal = proposalSnapshot.docs[0]
-          proposalData = proposal.data()
-          setProposalId(proposal.id)
-          setSelectedAdviser(proposalData.adviser || '')
         }
-
-        setGroup({
-          members: members,
-          thesisTitle: proposalData.title || '',
-          thesisDescription: proposalData.description || '',
-          client: proposalData.client || '',
-          field: proposalData.field || '',
-        })
-
       } catch (error) {
         console.error('Error fetching group details:', error)
       }
@@ -140,7 +116,6 @@ const GroupDetails = () => {
     fetchGroupDetails()
   }, [])
 
-  // Fetch advisers when modal opens
   useEffect(() => {
     const fetchAdvisers = async () => {
       try {
@@ -148,12 +123,11 @@ const GroupDetails = () => {
         const adviserQuery = query(usersRef, where('role', '==', 'Adviser'))
         const adviserSnapshot = await getDocs(adviserQuery)
 
-        const advisers = adviserSnapshot.docs.map((doc) => ({
+        const advisers = adviserSnapshot.docs.map(doc => ({
           id: doc.id,
           uid: doc.data().uid,
           name: doc.data().name,
         }))
-        
 
         setAdviserList(advisers)
       } catch (error) {
@@ -161,58 +135,64 @@ const GroupDetails = () => {
       }
     }
 
-    if (modalVisible) {
-      fetchAdvisers()
-    }
+    if (modalVisible) fetchAdvisers()
   }, [modalVisible])
 
-  const handleAdviserSelect = async (adviser) => {
-    if (!groupID) {
-      console.error('No group ID found')
-      alert('Cannot send adviser request: No group found')
+  useEffect(() => {
+    const checkRejectedRequests = async () => {
+      if (!groupID) return
+
+      try {
+        const requestsRef = collection(db, 'adviserRequests')
+        const rejectedQuery = query(
+          requestsRef,
+          where('groupID', '==', groupID),
+          where('status', '==', 'rejected')
+        )
+        const rejectedSnapshot = await getDocs(rejectedQuery)
+
+        if (!rejectedSnapshot.empty) {
+          const rejectedUIDs = rejectedSnapshot.docs.map(doc => doc.data().adviserUID)
+          setRejectedAdviserUIDs(rejectedUIDs)
+
+          setAdviserRejectionMessage('One or more advisers have rejected your request. Please select another adviser.')
+        }
+      } catch (error) {
+        console.error('Error checking rejected requests:', error)
+      }
+    }
+
+    checkRejectedRequests()
+  }, [groupID])
+
+  const handleSubmitRequest = async () => {
+    if (!selectedAdviser || !groupID) {
+      alert('Please select an adviser before submitting.')
       return
     }
 
     try {
-      // Get the current proposal data
-      const proposalsRef = collection(db, 'proposals')
-      const proposalQuery = query(
-        proposalsRef,
-        where('groupID', '==', groupID),
-        where('status', '==', 'accepted')
-      )
-      const proposalSnapshot = await getDocs(proposalQuery)
-      
-      if (proposalSnapshot.empty) {
-        alert('No accepted proposal found for this group')
-        return
-      }
-
-      const proposalData = proposalSnapshot.docs[0].data()
-
-      // Create adviser request document
-      const requestsRef = collection(db, 'adviserRequests')
-      await addDoc(requestsRef, {
-        adviserUID: adviser.uid,
-        groupID: groupID,
+      await addDoc(collection(db, 'adviserRequests'), {
+        adviserUID: selectedAdviser.uid,
+        adviserName: selectedAdviser.name,
+        groupID,
         status: 'pending',
         timestamp: serverTimestamp(),
         members: group.members,
         approvedProposal: {
-          title: proposalData.title,
-          description: proposalData.description,
-          client: proposalData.client,
-          field: proposalData.field
-        }
+          title: group.thesisTitle,
+          description: group.thesisDescription,
+          client: group.client,
+          field: group.field,
+        },
       })
 
       setIsRequestPending(true)
       setModalVisible(false)
-      alert('Adviser request sent successfully!')
-
+      alert('Adviser request submitted successfully!')
     } catch (error) {
-      console.error('Error sending adviser request:', error)
-      alert('Failed to send adviser request: ' + error.message)
+      console.error('Error submitting adviser request:', error)
+      alert('Failed to submit adviser request.')
     }
   }
 
@@ -221,104 +201,70 @@ const GroupDetails = () => {
       <CRow className="my-4">
         <CCol md={4}>
           <CCard>
-            <CCardHeader>
-              <strong>Members</strong>
-            </CCardHeader>
+            <CCardHeader><strong>Members</strong></CCardHeader>
             <CCardBody>
               {group.members.length > 0 ? (
                 <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
                   {group.members.map((member, index) => (
-                    <li key={index} style={{ marginBottom: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <CImage
-                          src={defaultProfilePic}
-                          width={30}
-                          height={30}
-                          alt="Profile Picture"
-                          className="me-3"
-                          style={{ border: '1px solid gray', borderRadius: '15px' }}
-                        />
-                        <div>
-                          <div>{member.name}</div>
-                          <div style={{ fontSize: '0.8em', color: '#666' }}>{member.email}</div>
-                        </div>
+                    <li key={index} className="d-flex align-items-center mb-3">
+                      <CImage
+                        src={defaultProfilePic}
+                        width={40}
+                        height={40}
+                        className="me-3 rounded-circle"
+                      />
+                      <div>
+                        <strong>{member.name}</strong>
+                        <div className="text-muted" style={{ fontSize: '0.9em' }}>{member.email}</div>
                       </div>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p>No members found in this group</p>
+                <p>No members found in this group.</p>
               )}
             </CCardBody>
           </CCard>
         </CCol>
+
         <CCol md={8}>
           <CCard className="mb-3">
-            <CCardHeader>
-              <strong>Thesis Information</strong>
-            </CCardHeader>
+            <CCardHeader><strong>Thesis Information</strong></CCardHeader>
             <CCardBody>
-              <div className="mb-3">
-                <strong>Thesis Title: </strong>
-                <span>{group.thesisTitle || 'No thesis title assigned'}</span>
-              </div>
-              <div className="mb-3">
-                <strong>Description: </strong>
-                <p>{group.thesisDescription || 'No description available'}</p>
-              </div>
+              <div><strong>Title:</strong> {group.thesisTitle || 'No title assigned'}</div>
+              <div><strong>Description:</strong> {group.thesisDescription || 'No description available'}</div>
             </CCardBody>
           </CCard>
 
-          <CRow>
-            <CCol md={12} style={{ marginBottom: '15px' }}>
-              <CCard>
-                <CCardHeader>
-                  <strong>Adviser</strong>
-                </CCardHeader>
-                <CCardBody>
-                  {!selectedAdviser ? (
-                    <CButton color="primary" onClick={() => setModalVisible(true)}>
-                      Pick an Adviser
-                    </CButton>
-                  ) : (
-                    <div>
-                      <strong>Selected Adviser: </strong> {selectedAdviser}
-                      <CButton
-                        color="secondary"
-                        onClick={() => setModalVisible(true)}
-                        className="ms-3"
-                      >
-                        Change Adviser
-                      </CButton>
-                    </div>
-                  )}
-                </CCardBody>
-              </CCard>
-            </CCol>
-          </CRow>
-          <CRow className="mb-3">
-            <CCol md={6}>
-              <CCard>
-                <CCardHeader>
-                  <strong>Client</strong>
-                </CCardHeader>
-                <CCardBody>
-                  <span>{group.client || 'No client specified'}</span>
-                </CCardBody>
-              </CCard>
-            </CCol>
+          <CCard className="mb-3">
+            <CCardHeader><strong>Client Information</strong></CCardHeader>
+            <CCardBody>
+              <div><strong>Client:</strong> {group.client || 'No client assigned'}</div>
+            </CCardBody>
+          </CCard>
 
-            <CCol md={6}>
-              <CCard>
-                <CCardHeader>
-                  <strong>Field</strong>
-                </CCardHeader>
-                <CCardBody>
-                  <span>{group.field || 'No field specified'}</span>
-                </CCardBody>
-              </CCard>
-            </CCol>
-          </CRow>
+          <CCard className="mb-3">
+            <CCardHeader><strong>Field of Study</strong></CCardHeader>
+            <CCardBody>
+              <div><strong>Field:</strong> {group.field || 'No field assigned'}</div>
+            </CCardBody>
+          </CCard>
+
+          <CCard>
+            <CCardHeader><strong>Adviser</strong></CCardHeader>
+            <CCardBody>
+              {adviserRejectionMessage && (
+                <CAlert color="warning">{adviserRejectionMessage}</CAlert>
+              )}
+              {isRequestPending ? (
+                <p className="text-warning">You have a pending adviser request. Please wait for a response.</p>
+              ) : (
+                <CButton color="primary" onClick={() => setModalVisible(true)}>
+                  Pick an Adviser
+                </CButton>
+              )}
+            </CCardBody>
+          </CCard>
         </CCol>
       </CRow>
 
@@ -326,35 +272,38 @@ const GroupDetails = () => {
         <CModalHeader>
           <CModalTitle>Select an Adviser</CModalTitle>
         </CModalHeader>
-          <CModalBody>
-        {adviserList.length > 0 ? (
-          <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-            {adviserList.map((adviser) => (
-              <li key={adviser.id} style={{ marginBottom: '10px' }}>
-                <CButton
-                  color="primary"
-                  className="w-100 text-start"
-                  onClick={() => handleAdviserSelect(adviser)}
-                  disabled={isRequestPending}
+        <CModalBody>
+          {adviserList.length > 0 ? (
+            <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
+              {adviserList.map((adviser) => (
+                <li
+                  key={adviser.id}
+                  onClick={() => setSelectedAdviser(adviser)}
+                  style={{
+                    cursor: rejectedAdviserUIDs.includes(adviser.uid) ? 'not-allowed' : 'pointer',
+                    backgroundColor: '#f8f9fa',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    marginBottom: '10px',
+                  }}
+                  className="d-flex justify-content-between align-items-center"
                 >
-                  {adviser.name}
-                </CButton>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No advisers available</p>
-        )}
-        {isRequestPending && (
-          <div className="text-warning mt-3">
-            You have a pending adviser request. Please wait for a response before selecting another adviser.
-          </div>
-        )}
-      </CModalBody>
+                  <span style={{ color: rejectedAdviserUIDs.includes(adviser.uid) ? 'gray' : 'black' }}>
+                    {adviser.name}
+                  </span>
+                  {selectedAdviser && selectedAdviser.uid === adviser.uid && (
+                    <span className="badge bg-primary">Selected</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No advisers available at the moment.</p>
+          )}
+        </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setModalVisible(false)}>
-            Close
-          </CButton>
+          <CButton color="secondary" onClick={() => setModalVisible(false)}>Cancel</CButton>
+          <CButton color="primary" onClick={handleSubmitRequest}>Submit Request</CButton>
         </CModalFooter>
       </CModal>
     </CContainer>
