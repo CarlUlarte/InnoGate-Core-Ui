@@ -15,7 +15,7 @@ import {
   CModalFooter,
   CAlert
 } from '@coreui/react'
-import { collection, getDocs, query, where, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from 'src/backend/firebase'
 
 const defaultProfilePic = 'src/assets/images/avatars/pic.png'
@@ -34,29 +34,7 @@ const GroupDetails = () => {
   const [groupID, setGroupID] = useState(null)
   const [adviserRejectionMessage, setAdviserRejectionMessage] = useState(null)
   const [rejectedAdviserUIDs, setRejectedAdviserUIDs] = useState([])
-  const [isRequestPending, setIsRequestPending] = useState(false)
-
-  useEffect(() => {
-    const checkPendingRequest = async () => {
-      if (!groupID) return
-
-      try {
-        const requestsRef = collection(db, 'adviserRequests')
-        const requestQuery = query(
-          requestsRef,
-          where('groupID', '==', groupID),
-          where('status', '==', 'pending')
-        )
-        const requestSnapshot = await getDocs(requestQuery)
-
-        setIsRequestPending(!requestSnapshot.empty)
-      } catch (error) {
-        console.error('Error checking pending requests:', error)
-      }
-    }
-
-    checkPendingRequest()
-  }, [groupID])
+  const [requestStatus, setRequestStatus] = useState(null)
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -96,7 +74,6 @@ const GroupDetails = () => {
             if (!proposalSnapshot.empty) {
               const proposal = proposalSnapshot.docs[0]
               proposalData = proposal.data()
-              setSelectedAdviser(proposalData.adviser || '')
             }
 
             setGroup({
@@ -106,6 +83,22 @@ const GroupDetails = () => {
               client: proposalData.client || '',
               field: proposalData.field || '',
             })
+
+            // Fetch adviser request status
+            const requestsRef = collection(db, 'adviserRequests')
+            const requestQuery = query(requestsRef, where('groupID', '==', userGroupID))
+            const requestSnapshot = await getDocs(requestQuery)
+
+            if (!requestSnapshot.empty) {
+              const requestData = requestSnapshot.docs[0].data()
+              setSelectedAdviser({ uid: requestData.adviserUID, name: requestData.adviserName })
+              setRequestStatus(requestData.status)
+
+              if (requestData.status === 'rejected') {
+                setRejectedAdviserUIDs([requestData.adviserUID])
+                setAdviserRejectionMessage('Your adviser request was rejected. Please choose another adviser.')
+              }
+            }
           }
         }
       } catch (error) {
@@ -138,33 +131,6 @@ const GroupDetails = () => {
     if (modalVisible) fetchAdvisers()
   }, [modalVisible])
 
-  useEffect(() => {
-    const checkRejectedRequests = async () => {
-      if (!groupID) return
-
-      try {
-        const requestsRef = collection(db, 'adviserRequests')
-        const rejectedQuery = query(
-          requestsRef,
-          where('groupID', '==', groupID),
-          where('status', '==', 'rejected')
-        )
-        const rejectedSnapshot = await getDocs(rejectedQuery)
-
-        if (!rejectedSnapshot.empty) {
-          const rejectedUIDs = rejectedSnapshot.docs.map(doc => doc.data().adviserUID)
-          setRejectedAdviserUIDs(rejectedUIDs)
-
-          setAdviserRejectionMessage('One or more advisers have rejected your request. Please select another adviser.')
-        }
-      } catch (error) {
-        console.error('Error checking rejected requests:', error)
-      }
-    }
-
-    checkRejectedRequests()
-  }, [groupID])
-
   const handleSubmitRequest = async () => {
     if (!selectedAdviser || !groupID) {
       alert('Please select an adviser before submitting.')
@@ -187,7 +153,7 @@ const GroupDetails = () => {
         },
       })
 
-      setIsRequestPending(true)
+      setRequestStatus('pending')
       setModalVisible(false)
       alert('Adviser request submitted successfully!')
     } catch (error) {
@@ -254,11 +220,20 @@ const GroupDetails = () => {
             <CCardHeader><strong>Adviser</strong></CCardHeader>
             <CCardBody>
               {adviserRejectionMessage && (
-                <CAlert color="warning">{adviserRejectionMessage}</CAlert>
+                <>
+                  <CAlert color="warning">{adviserRejectionMessage}</CAlert>
+                  <CButton color="primary" onClick={() => setModalVisible(true)}>
+                    Pick an Adviser
+                  </CButton>
+                </>
               )}
-              {isRequestPending ? (
-                <p className="text-warning">You have a pending adviser request. Please wait for a response.</p>
-              ) : (
+              {selectedAdviser && requestStatus !== 'rejected' && (
+                <p>
+                  <strong>Name:</strong> {selectedAdviser.name}{' '}
+                  {requestStatus === 'pending' && <span className="text-warning">(Pending for approval)</span>}
+                </p>
+              )}
+              {!adviserRejectionMessage && !selectedAdviser && (
                 <CButton color="primary" onClick={() => setModalVisible(true)}>
                   Pick an Adviser
                 </CButton>
@@ -275,28 +250,29 @@ const GroupDetails = () => {
         <CModalBody>
           {adviserList.length > 0 ? (
             <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-              {adviserList.map((adviser) => (
-                <li
-                  key={adviser.id}
-                  onClick={() => setSelectedAdviser(adviser)}
-                  style={{
-                    cursor: rejectedAdviserUIDs.includes(adviser.uid) ? 'not-allowed' : 'pointer',
-                    backgroundColor: '#f8f9fa',
-                    padding: '10px',
-                    borderRadius: '5px',
-                    marginBottom: '10px',
-                  }}
-                  className="d-flex justify-content-between align-items-center"
-                >
-                  <span style={{ color: rejectedAdviserUIDs.includes(adviser.uid) ? 'gray' : 'black' }}>
-                    {adviser.name}
-                  </span>
-                  {selectedAdviser && selectedAdviser.uid === adviser.uid && (
-                    <span className="badge bg-primary">Selected</span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {adviserList.map((adviser) => (
+              <li
+                key={adviser.id}
+                onClick={() => {
+                  if (!rejectedAdviserUIDs.includes(adviser.uid)) {
+                    setSelectedAdviser(adviser);
+                    setAdviserRejectionMessage(null); // Clear rejection message
+                  }
+                }}
+                style={{
+                  cursor: rejectedAdviserUIDs.includes(adviser.uid) ? 'not-allowed' : 'pointer',
+                  backgroundColor: selectedAdviser && selectedAdviser.uid === adviser.uid ? '#d1e7dd' : '#f8f9fa',
+                  padding: '10px',
+                  borderRadius: '5px',
+                  marginBottom: '10px',
+                  color: rejectedAdviserUIDs.includes(adviser.uid) ? 'gray' : 'black',
+                }}
+                className="d-flex justify-content-between align-items-center"
+              >
+                <span>{adviser.name}</span>
+              </li>
+            ))}
+          </ul>
           ) : (
             <p>No advisers available at the moment.</p>
           )}
