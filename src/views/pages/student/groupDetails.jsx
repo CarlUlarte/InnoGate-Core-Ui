@@ -13,10 +13,11 @@ import {
   CModalTitle,
   CModalBody,
   CModalFooter,
-  CAlert
+  CAlert,
 } from '@coreui/react'
 import { collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from 'src/backend/firebase'
+import CustomToast from 'src/components/Toast/CustomToast'
 
 const defaultProfilePic = 'src/assets/images/avatars/pic.png'
 
@@ -35,6 +36,7 @@ const GroupDetails = () => {
   const [adviserRejectionMessage, setAdviserRejectionMessage] = useState(null)
   const [rejectedAdviserUIDs, setRejectedAdviserUIDs] = useState([])
   const [requestStatus, setRequestStatus] = useState(null)
+  const [toast, setToast] = useState(null) // Added for toast notifications
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -56,17 +58,19 @@ const GroupDetails = () => {
             const membersQuery = query(usersRef, where('groupID', '==', userGroupID))
             const membersSnapshot = await getDocs(membersQuery)
 
-            const members = membersSnapshot.docs.map(doc => ({
-              name: doc.data().name || 'Unknown Name',
-              email: doc.data().email || 'No Email',
-              role: doc.data().role || 'Unknown Role'
-            })).filter(member => member.role === 'Student')
+            const members = membersSnapshot.docs
+              .map((doc) => ({
+                name: doc.data().name || 'Unknown Name',
+                email: doc.data().email || 'No Email',
+                role: doc.data().role || 'Unknown Role',
+              }))
+              .filter((member) => member.role === 'Student')
 
             const proposalsRef = collection(db, 'proposals')
             const proposalQuery = query(
               proposalsRef,
               where('groupID', '==', userGroupID),
-              where('status', '==', 'accepted')
+              where('status', '==', 'accepted'),
             )
             const proposalSnapshot = await getDocs(proposalQuery)
 
@@ -96,13 +100,19 @@ const GroupDetails = () => {
 
               if (requestData.status === 'rejected') {
                 setRejectedAdviserUIDs([requestData.adviserUID])
-                setAdviserRejectionMessage('Your adviser request was rejected. Please choose another adviser.')
+                setAdviserRejectionMessage(
+                  'Your adviser request was rejected. Please choose another adviser.',
+                )
               }
             }
           }
         }
       } catch (error) {
         console.error('Error fetching group details:', error)
+        setToast({
+          color: 'danger',
+          message: 'Failed to fetch group details.',
+        })
       }
     }
 
@@ -116,7 +126,7 @@ const GroupDetails = () => {
         const adviserQuery = query(usersRef, where('role', '==', 'Adviser'))
         const adviserSnapshot = await getDocs(adviserQuery)
 
-        const advisers = adviserSnapshot.docs.map(doc => ({
+        const advisers = adviserSnapshot.docs.map((doc) => ({
           id: doc.id,
           uid: doc.data().uid,
           name: doc.data().name,
@@ -125,6 +135,10 @@ const GroupDetails = () => {
         setAdviserList(advisers)
       } catch (error) {
         console.error('Error fetching advisers:', error)
+        setToast({
+          color: 'danger',
+          message: 'Failed to fetch advisers.',
+        })
       }
     }
 
@@ -133,7 +147,10 @@ const GroupDetails = () => {
 
   const handleSubmitRequest = async () => {
     if (!selectedAdviser || !groupID) {
-      alert('Please select an adviser before submitting.')
+      setToast({
+        color: 'danger',
+        message: 'You need to select an adviser or have a group before submitting.',
+      })
       return
     }
 
@@ -155,10 +172,16 @@ const GroupDetails = () => {
 
       setRequestStatus('pending')
       setModalVisible(false)
-      alert('Adviser request submitted successfully!')
+      setToast({
+        color: 'success',
+        message: 'Adviser request submitted successfully!',
+      })
     } catch (error) {
       console.error('Error submitting adviser request:', error)
-      alert('Failed to submit adviser request.')
+      setToast({
+        color: 'danger',
+        message: 'Failed to submit adviser request.',
+      })
     }
   }
 
@@ -167,7 +190,9 @@ const GroupDetails = () => {
       <CRow className="my-4">
         <CCol md={4}>
           <CCard>
-            <CCardHeader><strong>Members</strong></CCardHeader>
+            <CCardHeader>
+              <strong>Members</strong>
+            </CCardHeader>
             <CCardBody>
               {group.members.length > 0 ? (
                 <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
@@ -181,7 +206,9 @@ const GroupDetails = () => {
                       />
                       <div>
                         <strong>{member.name}</strong>
-                        <div className="text-muted" style={{ fontSize: '0.9em' }}>{member.email}</div>
+                        <div className="text-muted" style={{ fontSize: '0.9em' }}>
+                          {member.email}
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -195,29 +222,46 @@ const GroupDetails = () => {
 
         <CCol md={8}>
           <CCard className="mb-3">
-            <CCardHeader><strong>Thesis Information</strong></CCardHeader>
+            <CCardHeader>
+              <strong>Thesis Information</strong>
+            </CCardHeader>
             <CCardBody>
-              <div><strong>Title:</strong> {group.thesisTitle || 'No title assigned'}</div>
-              <div><strong>Description:</strong> {group.thesisDescription || 'No description available'}</div>
+              <div>
+                <strong>Title:</strong> {group.thesisTitle || 'No title assigned'}
+              </div>
+              <div>
+                <strong>Description:</strong>{' '}
+                {group.thesisDescription || 'No description available'}
+              </div>
             </CCardBody>
           </CCard>
 
           <CCard className="mb-3">
-            <CCardHeader><strong>Client Information</strong></CCardHeader>
+            <CCardHeader>
+              <strong>Client Information</strong>
+            </CCardHeader>
             <CCardBody>
-              <div><strong>Client:</strong> {group.client || 'No client assigned'}</div>
+              <div>
+                <strong>Client:</strong> {group.client || 'No client assigned'}
+              </div>
             </CCardBody>
           </CCard>
 
           <CCard className="mb-3">
-            <CCardHeader><strong>Field of Study</strong></CCardHeader>
+            <CCardHeader>
+              <strong>Field of Study</strong>
+            </CCardHeader>
             <CCardBody>
-              <div><strong>Field:</strong> {group.field || 'No field assigned'}</div>
+              <div>
+                <strong>Field:</strong> {group.field || 'No field assigned'}
+              </div>
             </CCardBody>
           </CCard>
 
           <CCard>
-            <CCardHeader><strong>Adviser</strong></CCardHeader>
+            <CCardHeader>
+              <strong>Adviser</strong>
+            </CCardHeader>
             <CCardBody>
               {adviserRejectionMessage && (
                 <>
@@ -230,7 +274,9 @@ const GroupDetails = () => {
               {selectedAdviser && requestStatus !== 'rejected' && (
                 <p>
                   <strong>Name:</strong> {selectedAdviser.name}{' '}
-                  {requestStatus === 'pending' && <span className="text-warning">(Pending for approval)</span>}
+                  {requestStatus === 'pending' && (
+                    <span className="text-warning">(Pending for approval)</span>
+                  )}
                 </p>
               )}
               {!adviserRejectionMessage && !selectedAdviser && (
@@ -242,46 +288,65 @@ const GroupDetails = () => {
           </CCard>
         </CCol>
       </CRow>
-
-      <CModal visible={modalVisible} onClose={() => setModalVisible(false)}>
+      <CModal
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false) // Close the modal
+          setSelectedAdviser(null) // Clear the selected adviser
+        }}
+      >
         <CModalHeader>
           <CModalTitle>Select an Adviser</CModalTitle>
         </CModalHeader>
         <CModalBody>
           {adviserList.length > 0 ? (
             <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-            {adviserList.map((adviser) => (
-              <li
-                key={adviser.id}
-                onClick={() => {
-                  if (!rejectedAdviserUIDs.includes(adviser.uid)) {
-                    setSelectedAdviser(adviser);
-                    setAdviserRejectionMessage(null); // Clear rejection message
-                  }
-                }}
-                style={{
-                  cursor: rejectedAdviserUIDs.includes(adviser.uid) ? 'not-allowed' : 'pointer',
-                  backgroundColor: selectedAdviser && selectedAdviser.uid === adviser.uid ? '#d1e7dd' : '#f8f9fa',
-                  padding: '10px',
-                  borderRadius: '5px',
-                  marginBottom: '10px',
-                  color: rejectedAdviserUIDs.includes(adviser.uid) ? 'gray' : 'black',
-                }}
-                className="d-flex justify-content-between align-items-center"
-              >
-                <span>{adviser.name}</span>
-              </li>
-            ))}
-          </ul>
+              {adviserList.map((adviser) => (
+                <li
+                  key={adviser.id}
+                  onClick={() => {
+                    if (!rejectedAdviserUIDs.includes(adviser.uid)) {
+                      setSelectedAdviser(adviser)
+                      setAdviserRejectionMessage(null) // Clear rejection message
+                    }
+                  }}
+                  style={{
+                    cursor: rejectedAdviserUIDs.includes(adviser.uid) ? 'not-allowed' : 'pointer',
+                    backgroundColor:
+                      selectedAdviser && selectedAdviser.uid === adviser.uid
+                        ? '#d1e7dd'
+                        : '#f8f9fa',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    marginBottom: '10px',
+                    color: rejectedAdviserUIDs.includes(adviser.uid) ? 'gray' : 'black',
+                  }}
+                  className="d-flex justify-content-between align-items-center"
+                >
+                  <span>{adviser.name}</span>
+                </li>
+              ))}
+            </ul>
           ) : (
             <p>No advisers available at the moment.</p>
           )}
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setModalVisible(false)}>Cancel</CButton>
-          <CButton color="primary" onClick={handleSubmitRequest}>Submit Request</CButton>
+          <CButton
+            color="secondary"
+            onClick={() => {
+              setModalVisible(false) // Close the modal
+              setSelectedAdviser(null) // Clear the selected adviser
+            }}
+          >
+            Cancel
+          </CButton>
+          <CButton color="primary" onClick={handleSubmitRequest}>
+            Submit Request
+          </CButton>
         </CModalFooter>
       </CModal>
+      <CustomToast toast={toast} setToast={setToast} /> {/* Toast added */}
     </CContainer>
   )
 }

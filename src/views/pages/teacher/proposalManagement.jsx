@@ -17,17 +17,20 @@ import {
   CListGroupItem,
   CFormTextarea,
   CSpinner,
-  CBadge
+  CBadge,
+  CAvatar,
 } from '@coreui/react'
 import { cilCheckCircle, cilXCircle, cilSync } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
 import { db, auth } from 'src/backend/firebase'
 import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore'
+import { fetchMembersByGroup } from 'src/components/Calendar/firestoreUtils.js'
 import CustomToast from 'src/components/Toast/CustomToast'
 
 const ProposalManagement = () => {
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [proposalsByGroup, setProposalsByGroup] = useState({})
+  const [groupMembers, setGroupMembers] = useState([])
   const [toast, setToast] = useState(null)
   const [revisionModal, setRevisionModal] = useState(false)
   const [revisionComment, setRevisionComment] = useState('')
@@ -49,29 +52,28 @@ const ProposalManagement = () => {
 
           if (teacher) {
             setTeacherID(teacher.teacherID)
-            
+
             // Get all students for this teacher
             const students = usersSnapshot.docs
               .map((doc) => ({ ...doc.data(), id: doc.id }))
               .filter((user) => user.role === 'Student' && user.myTeacher === teacher.teacherID)
 
             // Extract unique group IDs
-            const groups = [...new Set(students.map((student) => student.groupID))]
-              .filter(Boolean)
-            
+            const groups = [...new Set(students.map((student) => student.groupID))].filter(Boolean)
+
             setTeacherGroups(groups)
-            
+
             // Fetch proposals for these groups
             if (groups.length > 0) {
               const proposalsSnapshot = await getDocs(collection(db, 'proposals'))
               const fetchedProposals = proposalsSnapshot.docs.map((doc) => ({
                 id: doc.id,
-                ...doc.data()
+                ...doc.data(),
               }))
 
               const groupedProposals = groups.reduce((acc, groupID) => {
-                acc[groupID] = fetchedProposals.filter(proposal => proposal.groupID === groupID);
-                return acc;
+                acc[groupID] = fetchedProposals.filter((proposal) => proposal.groupID === groupID)
+                return acc
               }, {})
 
               setProposalsByGroup(groupedProposals)
@@ -92,6 +94,25 @@ const ProposalManagement = () => {
 
     fetchTeacherData()
   }, [])
+
+  useEffect(() => {
+    const loadGroupMembers = async () => {
+      if (selectedGroup) {
+        try {
+          const members = await fetchMembersByGroup(selectedGroup)
+          setGroupMembers(members)
+        } catch (error) {
+          console.error('Error fetching group members:', error)
+          setToast({
+            color: 'danger',
+            message: 'Error fetching group members',
+          })
+        }
+      }
+    }
+
+    loadGroupMembers()
+  }, [selectedGroup])
 
   const handleGroupSelect = (groupID) => {
     setSelectedGroup(groupID)
@@ -150,9 +171,7 @@ const ProposalManagement = () => {
       setProposalsByGroup((prevProposals) => ({
         ...prevProposals,
         [selectedGroup]: prevProposals[selectedGroup].map((proposal) =>
-          proposal.id === proposalId
-            ? { ...proposal, status: 'rejected' }
-            : proposal,
+          proposal.id === proposalId ? { ...proposal, status: 'rejected' } : proposal,
         ),
       }))
 
@@ -223,11 +242,15 @@ const ProposalManagement = () => {
 
   // Helper function to get badge color based on status
   const getStatusBadgeColor = (status) => {
-    switch(status) {
-      case 'accepted': return 'success'
-      case 'rejected': return 'danger'
-      case 'needs_revision': return 'warning'
-      default: return 'secondary'
+    switch (status) {
+      case 'accepted':
+        return 'success'
+      case 'rejected':
+        return 'danger'
+      case 'needs_revision':
+        return 'warning'
+      default:
+        return 'secondary'
     }
   }
 
@@ -235,15 +258,13 @@ const ProposalManagement = () => {
   const isButtonDisabled = (proposal) => {
     // Disable buttons if proposal is accepted or rejected
     // Or if any other proposal in the group is accepted
-    const hasAcceptedProposal = proposalsByGroup[selectedGroup].some(
-      p => p.status === 'accepted'
-    );
+    const hasAcceptedProposal = proposalsByGroup[selectedGroup].some((p) => p.status === 'accepted')
 
     return (
-      proposal.status === 'accepted' || 
-      proposal.status === 'rejected' || 
+      proposal.status === 'accepted' ||
+      proposal.status === 'rejected' ||
       (hasAcceptedProposal && proposal.status !== 'needs_revision')
-    );
+    )
   }
 
   if (loading) {
@@ -252,40 +273,75 @@ const ProposalManagement = () => {
 
   return (
     <CContainer fluid className="d-flex" style={{ fontSize: '0.875rem' }}>
-      {/* Sidebar - Group List */}
-      <CCard style={{ width: '250px', marginRight: '15px' }}>
-        <CCardHeader className="py-2">
-          <h6 className="m-0">My Groups</h6>
-        </CCardHeader>
-        <CCardBody className="p-0">
-          <CListGroup>
-            {teacherGroups.length > 0 ? (
-              teacherGroups.map((groupID) => (
-                <CListGroupItem 
-                  key={groupID}
-                  onClick={() => handleGroupSelect(groupID)}
-                  active={selectedGroup === groupID}
-                  color={selectedGroup === groupID ? 'primary' : undefined}
-                  className="py-2"
-                >
-                  <small>{groupID}</small>
+      {/* Left sidebar containing Groups and Members */}
+      <div style={{ width: '250px', marginRight: '15px' }}>
+        {/* Groups Card */}
+        <CCard className="mb-3">
+          <CCardHeader className="py-2">
+            <h6 className="m-0">My Groups</h6>
+          </CCardHeader>
+          <CCardBody className="p-0">
+            <CListGroup>
+              {teacherGroups.length > 0 ? (
+                teacherGroups.map((groupID) => (
+                  <CListGroupItem
+                    key={groupID}
+                    onClick={() => handleGroupSelect(groupID)}
+                    active={selectedGroup === groupID}
+                    color={selectedGroup === groupID ? 'primary' : undefined}
+                    className="py-2"
+                  >
+                    <small>{groupID}</small>
+                  </CListGroupItem>
+                ))
+              ) : (
+                <CListGroupItem className="py-2">
+                  <small>No groups found</small>
                 </CListGroupItem>
-              ))
-            ) : (
-              <CListGroupItem className="py-2">
-                <small>No groups found</small>
-              </CListGroupItem>
-            )}
-          </CListGroup>
-        </CCardBody>
-      </CCard>
+              )}
+            </CListGroup>
+          </CCardBody>
+        </CCard>
 
+        {/* Members Card */}
+        <CCard>
+          <CCardHeader className="py-2">
+            <h6 className="m-0">Members</h6>
+          </CCardHeader>
+          <CCardBody className="p-0">
+            <CListGroup>
+              {selectedGroup ? (
+                groupMembers.length > 0 ? (
+                  groupMembers.map((member) => (
+                    <CListGroupItem key={member.id} className="py-2">
+                      <div className="d-flex align-items-center">
+                        <CAvatar
+                          src={member.photoURL || '/avatars/default.jpg'}
+                          size="sm"
+                          className="me-2"
+                        />
+                        <small>{member.name || member.email}</small>
+                      </div>
+                    </CListGroupItem>
+                  ))
+                ) : (
+                  <CListGroupItem className="py-2">
+                    <small>No members in this group</small>
+                  </CListGroupItem>
+                )
+              ) : (
+                <CListGroupItem className="py-2">
+                  <small>Select a group to see members</small>
+                </CListGroupItem>
+              )}
+            </CListGroup>
+          </CCardBody>
+        </CCard>
+      </div>
       {/* Main Content - Proposal Details */}
       <CCard style={{ flex: 1 }}>
         <CCardHeader className="py-2">
-          <h6 className="m-0">
-            {selectedGroup ? `Group: ${selectedGroup}` : 'Select a Group'}
-          </h6>
+          <h6 className="m-0">{selectedGroup ? `Group: ${selectedGroup}` : 'Select a Group'}</h6>
         </CCardHeader>
         <CCardBody>
           {selectedGroup && proposalsByGroup[selectedGroup]?.length > 0 ? (
@@ -300,17 +356,21 @@ const ProposalManagement = () => {
                   </p>
                   <CRow>
                     <CCol>
-                      <small><strong>Client:</strong> {proposal.client}</small>
+                      <small>
+                        <strong>Client:</strong> {proposal.client}
+                      </small>
                     </CCol>
                     <CCol>
-                      <small><strong>Field:</strong> {proposal.field}</small>
+                      <small>
+                        <strong>Field:</strong> {proposal.field}
+                      </small>
                     </CCol>
                   </CRow>
                   <CRow className="mt-2">
                     <CCol>
                       <small>
                         <strong>Status:</strong>{' '}
-                        <CBadge 
+                        <CBadge
                           color={getStatusBadgeColor(proposal.status)}
                           className="text-capitalize"
                         >
@@ -322,8 +382,8 @@ const ProposalManagement = () => {
                 </CCardBody>
                 <CCardBody className="border-top p-2">
                   <CButtonGroup className="w-100">
-                    <CButton 
-                      color="success" 
+                    <CButton
+                      color="success"
                       size="sm"
                       onClick={() => handleApprove(proposal.id)}
                       disabled={isButtonDisabled(proposal)}
@@ -331,8 +391,8 @@ const ProposalManagement = () => {
                       <CIcon icon={cilCheckCircle} className="me-1" />
                       Approve
                     </CButton>
-                    <CButton 
-                      color="danger" 
+                    <CButton
+                      color="danger"
                       size="sm"
                       onClick={() => handleReject(proposal.id)}
                       disabled={isButtonDisabled(proposal)}
@@ -340,8 +400,8 @@ const ProposalManagement = () => {
                       <CIcon icon={cilXCircle} className="me-1" />
                       Reject
                     </CButton>
-                    <CButton 
-                      color="warning" 
+                    <CButton
+                      color="warning"
                       size="sm"
                       onClick={() => handleRevise(proposal)}
                       disabled={isButtonDisabled(proposal)}
@@ -380,12 +440,7 @@ const ProposalManagement = () => {
           <CButton size="sm" color="secondary" onClick={() => setRevisionModal(false)}>
             Cancel
           </CButton>
-          <CButton 
-            size="sm"
-            color="primary" 
-            onClick={handleRevisionSubmit}
-            disabled={loading}
-          >
+          <CButton size="sm" color="primary" onClick={handleRevisionSubmit} disabled={loading}>
             {loading ? (
               <>
                 <CSpinner size="sm" className="me-1" />

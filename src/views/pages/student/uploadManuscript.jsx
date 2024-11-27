@@ -23,56 +23,52 @@ const UploadManuscript = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const currentUser = auth.currentUser;
+        const currentUser = auth.currentUser
         if (!currentUser) {
-          console.error('No user is signed in');
+          console.error('No user is signed in')
           setToast({
             color: 'danger',
             message: 'Please sign in to upload manuscripts.',
-          });
-          return;
+          })
+          return
         }
 
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
         if (!userDoc.exists()) {
-          console.error('User document not found');
+          console.error('User document not found')
           setToast({
             color: 'danger',
             message: 'User profile not found.',
-          });
-          return;
+          })
+          return
         }
 
-        const userData = userDoc.data();
-        console.log('User Data:', userData);
-        
+        const userData = userDoc.data()
+        console.log('User Data:', userData)
+
         if (!userData.groupID) {
-          console.error('User has no groupID');
-          setToast({
-            color: 'warning',
-            message: 'You need to be assigned to a group before uploading.',
-          });
-          return;
+          console.error('User has no groupID')
+          return
         }
 
-        setCurrentUserData(userData);
-        
+        setCurrentUserData(userData)
+
         // Restore preview if file exists in userData
         if (userData.fileContainer && userData.fileContainer.file) {
-          setUploaded(true);
-          setPreview(userData.fileContainer.file);
+          setUploaded(true)
+          setPreview(userData.fileContainer.file)
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('Error fetching user data:', error)
         setToast({
           color: 'danger',
           message: `Error fetching user data: ${error.message}`,
-        });
+        })
       }
-    };
-    
-    fetchUserData();
-  }, []);
+    }
+
+    fetchUserData()
+  }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -80,144 +76,143 @@ const UploadManuscript = () => {
     },
     multiple: false,
     onDrop: (acceptedFiles) => {
-      const selectedFile = acceptedFiles[0];
+      const selectedFile = acceptedFiles[0]
       if (selectedFile && selectedFile.type === 'application/pdf') {
-        console.log('File selected:', selectedFile);
-        setFile(selectedFile);
-        const objectUrl = URL.createObjectURL(selectedFile);
-        setPreview(objectUrl);
+        console.log('File selected:', selectedFile)
+        setFile(selectedFile)
+        const objectUrl = URL.createObjectURL(selectedFile)
+        setPreview(objectUrl)
       } else {
         setToast({
           color: 'warning',
           message: 'Only PDF files are allowed.',
-        });
+        })
       }
     },
-  });
+  })
 
   // Function to update file container for all group members
   const updateGroupMembersFileContainers = async (fileUrl) => {
     try {
       if (!currentUserData?.groupID) {
-        throw new Error('No group ID found');
+        throw new Error('No group ID found')
       }
 
-      console.log('Updating group members for groupID:', currentUserData.groupID);
-      
+      console.log('Updating group members for groupID:', currentUserData.groupID)
+
       const usersQuery = query(
         collection(db, 'users'),
-        where('groupID', '==', currentUserData.groupID)
-      );
-      
-      const groupMembers = await getDocs(usersQuery);
-      
+        where('groupID', '==', currentUserData.groupID),
+      )
+
+      const groupMembers = await getDocs(usersQuery)
+
       if (groupMembers.empty) {
-        console.log('No group members found');
-        return;
+        console.log('No group members found')
+        return
       }
 
       const updatePromises = groupMembers.docs.map(async (userDoc) => {
-        console.log('Updating user:', userDoc.id);
+        console.log('Updating user:', userDoc.id)
         return updateDoc(doc(db, 'users', userDoc.id), {
           fileContainer: {
             file: fileUrl,
             uploadedAt: new Date().toISOString(),
-            fileName: file.name
-          }
-        });
-      });
-      
-      await Promise.all(updatePromises);
-      console.log('All group members updated successfully');
-      
+            fileName: file.name,
+          },
+        })
+      })
+
+      await Promise.all(updatePromises)
+      console.log('All group members updated successfully')
     } catch (error) {
-      console.error('Error updating group members:', error);
-      throw error;
+      console.error('Error updating group members:', error)
+      throw error
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     if (!file) {
       setToast({
         color: 'warning',
         message: 'Please select a file first.',
-      });
-      return;
+      })
+      return
     }
 
     if (!currentUserData?.groupID) {
       setToast({
         color: 'warning',
         message: 'You must be assigned to a group before uploading.',
-      });
-      return;
+      })
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
-      console.log('Starting upload process...');
-      
+      console.log('Starting upload process...')
+
       const storageRef = ref(
         storage,
-        `manuscripts/${currentUserData.groupID}/${Date.now()}_${file.name}`
-      );
+        `manuscripts/${currentUserData.groupID}/${Date.now()}_${file.name}`,
+      )
 
-      console.log('Storage reference created:', storageRef);
+      console.log('Storage reference created:', storageRef)
 
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const uploadTask = uploadBytesResumable(storageRef, file)
 
       uploadTask.on(
         'state_changed',
         (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-          console.log('Upload progress:', progress);
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+          setUploadProgress(progress)
+          console.log('Upload progress:', progress)
         },
         (error) => {
-          console.error('Upload error:', error);
+          console.error('Upload error:', error)
           setToast({
             color: 'danger',
             message: `Upload failed: ${error.message}`,
-          });
-          setLoading(false);
+          })
+          setLoading(false)
         },
         async () => {
           try {
-            console.log('Upload completed, getting download URL...');
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log('Download URL obtained:', downloadURL);
-            
-            await updateGroupMembersFileContainers(downloadURL);
-            
-            setUploaded(true);
-            setShowFeedback(true);
+            console.log('Upload completed, getting download URL...')
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref)
+            console.log('Download URL obtained:', downloadURL)
+
+            await updateGroupMembersFileContainers(downloadURL)
+
+            setUploaded(true)
+            setShowFeedback(true)
             setToast({
               color: 'success',
               message: 'Manuscript uploaded successfully!',
-            });
+            })
           } catch (error) {
-            console.error('Error in upload completion:', error);
+            console.error('Error in upload completion:', error)
             setToast({
               color: 'danger',
               message: `Error completing upload: ${error.message}`,
-            });
+            })
           } finally {
-            setLoading(false);
-            setUploadProgress(0);
+            setLoading(false)
+            setUploadProgress(0)
           }
-        }
-      );
+        },
+      )
     } catch (error) {
-      console.error('Error initiating upload:', error);
+      console.error('Error initiating upload:', error)
       setToast({
         color: 'danger',
         message: `Error initiating upload: ${error.message}`,
-      });
-      setLoading(false);
+      })
+      setLoading(false)
     }
-  };
+  }
 
   const handleEdit = () => {
     setUploaded(false)
@@ -311,11 +306,7 @@ const UploadManuscript = () => {
 
               <p className="file-type-info">Accepted File Type: PDF only</p>
 
-              <CButton 
-                color="primary" 
-                onClick={handleSubmit} 
-                disabled={!file || loading}
-              >
+              <CButton color="primary" onClick={handleSubmit} disabled={!file || loading}>
                 {loading ? (
                   <>
                     <CSpinner size="sm" className="me-2" />

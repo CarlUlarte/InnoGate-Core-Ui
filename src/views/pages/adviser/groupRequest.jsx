@@ -14,12 +14,13 @@ import {
   CModalBody,
   CModalFooter,
   CListGroup,
-  CListGroupItem
+  CListGroupItem,
 } from '@coreui/react'
 import { cilCheckCircle, cilXCircle } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
 import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore'
 import { db, auth } from 'src/backend/firebase'
+import CustomToast from 'src/components/Toast/CustomToast'
 
 const GroupRequest = () => {
   const [groupRequests, setGroupRequests] = useState([])
@@ -27,8 +28,8 @@ const GroupRequest = () => {
   const [confirmModal, setConfirmModal] = useState(false)
   const [modalAction, setModalAction] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState(null) // Add toast state
 
-  // Fetch adviser requests on component mount
   useEffect(() => {
     const fetchAdviserRequests = async () => {
       try {
@@ -42,17 +43,16 @@ const GroupRequest = () => {
         const requestQuery = query(
           requestsRef,
           where('adviserUID', '==', currentUser.uid),
-          where('status', '==', 'pending')
+          where('status', '==', 'pending'),
         )
         const requestSnapshot = await getDocs(requestQuery)
 
-        const requests = requestSnapshot.docs.map(doc => ({
+        const requests = requestSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate()
+          timestamp: doc.data().timestamp?.toDate(),
         }))
 
-        console.log('Fetched requests:', requests)
         setGroupRequests(requests)
         setLoading(false)
       } catch (error) {
@@ -77,20 +77,18 @@ const GroupRequest = () => {
     if (!selectedGroup) return
 
     try {
-      // Update the adviser request status
       const requestRef = doc(db, 'adviserRequests', selectedGroup.id)
       await updateDoc(requestRef, {
         status: accepted ? 'accepted' : 'rejected',
-        responseTimestamp: new Date()
+        responseTimestamp: new Date(),
       })
 
       if (accepted) {
-        // Update the proposal with the adviser information
         const proposalsRef = collection(db, 'proposals')
         const proposalQuery = query(
           proposalsRef,
           where('groupID', '==', selectedGroup.groupID),
-          where('status', '==', 'accepted')
+          where('status', '==', 'accepted'),
         )
         const proposalSnapshot = await getDocs(proposalQuery)
 
@@ -99,19 +97,24 @@ const GroupRequest = () => {
           await updateDoc(doc(db, 'proposals', proposalDoc.id), {
             adviser: auth.currentUser.displayName,
             adviserUID: auth.currentUser.uid,
-            lastUpdated: new Date()
+            lastUpdated: new Date(),
           })
         }
       }
 
-      // Update local state to remove the processed request
-      setGroupRequests(prev => prev.filter(request => request.id !== selectedGroup.id))
+      setGroupRequests((prev) => prev.filter((request) => request.id !== selectedGroup.id))
+      setToast({
+        color: 'success',
+        message: `Group request ${accepted ? 'accepted' : 'rejected'} successfully!`,
+      }) // Success toast
       setSelectedGroup(null)
       setConfirmModal(false)
-
     } catch (error) {
       console.error('Error handling adviser request:', error)
-      alert('Failed to process request: ' + error.message)
+      setToast({
+        color: 'danger',
+        message: 'Failed to process request. Please try again.',
+      }) // Error toast
     }
   }
 
@@ -130,7 +133,7 @@ const GroupRequest = () => {
           <CListGroup>
             {groupRequests.length > 0 ? (
               groupRequests.map((request) => (
-                <CListGroupItem 
+                <CListGroupItem
                   key={request.id}
                   onClick={() => handleGroupSelect(request)}
                   active={selectedGroup?.id === request.id}
@@ -153,9 +156,7 @@ const GroupRequest = () => {
       <CCard style={{ flex: 1 }}>
         <CCardHeader className="py-2">
           <h6 className="m-0">
-            {selectedGroup 
-              ? `Group Request: ${selectedGroup.groupID}` 
-              : 'Select a Group Request'}
+            {selectedGroup ? `Group Request: ${selectedGroup.groupID}` : 'Select a Group Request'}
           </h6>
         </CCardHeader>
         <CCardBody>
@@ -191,10 +192,14 @@ const GroupRequest = () => {
                   </p>
                   <CRow>
                     <CCol>
-                      <small><strong>Client:</strong> {selectedGroup.approvedProposal.client}</small>
+                      <small>
+                        <strong>Client:</strong> {selectedGroup.approvedProposal.client}
+                      </small>
                     </CCol>
                     <CCol>
-                      <small><strong>Field:</strong> {selectedGroup.approvedProposal.field}</small>
+                      <small>
+                        <strong>Field:</strong> {selectedGroup.approvedProposal.field}
+                      </small>
                     </CCol>
                   </CRow>
                 </CCardBody>
@@ -202,19 +207,11 @@ const GroupRequest = () => {
 
               {/* Action Buttons */}
               <CButtonGroup className="w-100">
-                <CButton 
-                  color="success" 
-                  size="sm"
-                  onClick={() => openConfirmModal('accept')}
-                >
+                <CButton color="success" size="sm" onClick={() => openConfirmModal('accept')}>
                   <CIcon icon={cilCheckCircle} className="me-1" />
                   Accept
                 </CButton>
-                <CButton 
-                  color="danger" 
-                  size="sm"
-                  onClick={() => openConfirmModal('reject')}
-                >
+                <CButton color="danger" size="sm" onClick={() => openConfirmModal('reject')}>
                   <CIcon icon={cilXCircle} className="me-1" />
                   Reject
                 </CButton>
@@ -246,15 +243,16 @@ const GroupRequest = () => {
           <CButton size="sm" color="secondary" onClick={() => setConfirmModal(false)}>
             Cancel
           </CButton>
-          <CButton 
+          <CButton
             size="sm"
-            color={modalAction === 'accept' ? 'success' : 'danger'} 
+            color={modalAction === 'accept' ? 'success' : 'danger'}
             onClick={() => handleGroupRequestResponse(modalAction === 'accept')}
           >
             {modalAction === 'accept' ? 'Accept' : 'Reject'}
           </CButton>
         </CModalFooter>
       </CModal>
+      <CustomToast toast={toast} setToast={setToast} />
     </CContainer>
   )
 }
