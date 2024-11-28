@@ -144,9 +144,11 @@ const Login = () => {
                     </CRow>
                     <CRow>
                       <CCol className="d-flex justify-content-center">
-                        <CButton color="link" className="px-0">
-                          Forgot password?
-                        </CButton>
+                        <Link to="/forgot-password" className="text-decoration-none">
+                          <CButton color="link" className="px-0">
+                            Forgot password?
+                          </CButton>
+                        </Link>
                       </CCol>
                     </CRow>
                   </CForm>
