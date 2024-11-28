@@ -289,63 +289,59 @@ const GroupDetails = () => {
         </CCol>
       </CRow>
       <CModal
-        visible={modalVisible}
-        onClose={() => {
-          setModalVisible(false) // Close the modal
-          setSelectedAdviser(null) // Clear the selected adviser
-        }}
-      >
-        <CModalHeader>
-          <CModalTitle>Select an Adviser</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {adviserList.length > 0 ? (
-            <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-              {adviserList.map((adviser) => (
-                <li
-                  key={adviser.id}
-                  onClick={() => {
-                    if (!rejectedAdviserUIDs.includes(adviser.uid)) {
-                      setSelectedAdviser(adviser)
-                      setAdviserRejectionMessage(null) // Clear rejection message
-                    }
-                  }}
-                  style={{
-                    cursor: rejectedAdviserUIDs.includes(adviser.uid) ? 'not-allowed' : 'pointer',
-                    backgroundColor:
-                      selectedAdviser && selectedAdviser.uid === adviser.uid
-                        ? '#d1e7dd'
-                        : '#f8f9fa',
-                    padding: '10px',
-                    borderRadius: '5px',
-                    marginBottom: '10px',
-                    color: rejectedAdviserUIDs.includes(adviser.uid) ? 'gray' : 'black',
-                  }}
-                  className="d-flex justify-content-between align-items-center"
-                >
-                  <span>{adviser.name}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No advisers available at the moment.</p>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton
-            color="secondary"
+  visible={modalVisible}
+  onClose={() => {
+    setModalVisible(false); // Close the modal
+    setSelectedAdviser(null); // Clear the selected adviser
+  }}
+>
+  <CModalHeader>
+    <CModalTitle>Select an Adviser</CModalTitle>
+  </CModalHeader>
+  <CModalBody>
+    {adviserList.length > 0 ? (
+      <ul className="list-unstyled">
+        {adviserList.map((adviser) => (
+          <li
+            key={adviser.id}
             onClick={() => {
-              setModalVisible(false) // Close the modal
-              setSelectedAdviser(null) // Clear the selected adviser
+              if (!rejectedAdviserUIDs.includes(adviser.uid)) {
+                setSelectedAdviser(adviser);
+                setAdviserRejectionMessage(null); // Clear rejection message
+              }
             }}
+            className={`d-flex justify-content-between align-items-center p-3 mb-2 rounded ${
+              selectedAdviser && selectedAdviser.uid === adviser.uid
+                ? 'bg-success text-white'
+                : 'bg-body-secondary' // Automatically adapts to dark mode
+            } ${
+              rejectedAdviserUIDs.includes(adviser.uid) ? 'text-muted disabled' : 'cursor-pointer'
+            }`}
           >
-            Cancel
-          </CButton>
-          <CButton color="primary" onClick={handleSubmitRequest}>
-            Submit Request
-          </CButton>
-        </CModalFooter>
-      </CModal>
+            <span>{adviser.name}</span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-center">No advisers available at the moment.</p>
+    )}
+  </CModalBody>
+  <CModalFooter>
+    <CButton
+      color="secondary"
+      onClick={() => {
+        setModalVisible(false); // Close the modal
+        setSelectedAdviser(null); // Clear the selected adviser
+      }}
+    >
+      Cancel
+    </CButton>
+    <CButton color="primary" onClick={handleSubmitRequest}>
+      Submit Request
+    </CButton>
+  </CModalFooter>
+</CModal>
+
       <CustomToast toast={toast} setToast={setToast} /> {/* Toast added */}
     </CContainer>
   )

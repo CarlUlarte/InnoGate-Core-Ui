@@ -342,13 +342,11 @@ useEffect(() => {
         return {
           borderColor: '#dc3545',
           borderWidth: '2px',
-          backgroundColor: '#ffebee',
         };
       case 'accepted':
         return {
           borderColor: '#28a745',
           borderWidth: '2px',
-          backgroundColor: '#e9fbe9',
         };
       default:
         return {};
@@ -418,7 +416,7 @@ useEffect(() => {
                       value={form.description}
                       onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
                       disabled={!form.editable || form.status === 'rejected'}
-                      className={form.status === 'rejected' ? 'bg-light' : ''}
+                      
                     />
                   </div>
 
@@ -431,7 +429,6 @@ useEffect(() => {
                           value={form.client}
                           onChange={(e) => handleFieldChange(index, 'client', e.target.value)}
                           disabled={!form.editable || form.status === 'rejected'}
-                          className={form.status === 'rejected' ? 'bg-light' : ''}
                         />
                       </div>
                     </CCol>
