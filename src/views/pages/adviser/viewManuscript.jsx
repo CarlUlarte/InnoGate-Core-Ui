@@ -60,10 +60,37 @@ const ViewManuscript = () => {
           return
         }
 
-        // Query groups where adviser is assigned
+        const adviserName = adviserDoc.data().name
+
+        // Query adviserRequests where adviserName matches and status is accepted
+        const adviserRequestsQuery = query(
+          collection(db, 'adviserRequests'),
+          where('adviserName', '==', adviserName),
+          where('status', '==', 'accepted')
+        )
+        const adviserRequestsSnapshot = await getDocs(adviserRequestsQuery)
+
+        const groupIDs = []
+        adviserRequestsSnapshot.forEach((doc) => {
+          const requestData = doc.data()
+          if (requestData.groupID) {
+            groupIDs.push(requestData.groupID)
+          }
+        })
+
+        if (groupIDs.length === 0) {
+          setToast({
+            color: 'warning',
+            message: 'No groups found for the adviser.',
+          })
+          setGroups([])
+          return
+        }
+
+        // Query groups that match the groupIDs
         const groupsQuery = query(
           collection(db, 'users'),
-          where('groupID', '!=', null),
+          where('groupID', 'in', groupIDs)
         )
         const groupsSnapshot = await getDocs(groupsQuery)
 
