@@ -15,7 +15,7 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilEnvelopeClosed } from '@coreui/icons'
 import { auth } from '../../../backend/firebase'
-import { sendPasswordResetEmail } from 'firebase/auth'
+import { sendPasswordResetEmail, fetchSignInMethodsForEmail } from 'firebase/auth'
 import { Link } from 'react-router-dom'
 
 const ForgotPassword = () => {
@@ -31,17 +31,24 @@ const ForgotPassword = () => {
     setLoading(true)
 
     try {
+      // First check if the email exists
+      const signInMethods = await fetchSignInMethodsForEmail(auth, email)
+
+      if (signInMethods.length === 0) {
+        // No user exists with this email
+        setError('No user found with this email.')
+        return
+      }
+
+      // Email exists, send reset email
       await sendPasswordResetEmail(auth, email)
       setSuccess('Password reset email sent! Please check your inbox.')
-      setEmail('') // Clear the email field after successful submission
+      setEmail('')
     } catch (error) {
-      console.error('Error sending reset email:', error.message)
+      console.error('Error:', error.message)
       switch (error.code) {
         case 'auth/invalid-email':
           setError('The email address is not valid.')
-          break
-        case 'auth/user-not-found':
-          setError('No user found with this email.')
           break
         case 'auth/too-many-requests':
           setError('Too many requests. Please try again later.')
@@ -91,7 +98,7 @@ const ForgotPassword = () => {
                             Sending...
                           </>
                         ) : (
-                          'Send Reset Link'
+                          'Submit'
                         )}
                       </CButton>
                     </CCol>
