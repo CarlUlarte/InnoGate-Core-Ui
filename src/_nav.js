@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import CIcon from '@coreui/icons-react'
 import {
   cilCalendar,
@@ -15,9 +15,31 @@ import {
 } from '@coreui/icons'
 import { CNavItem } from '@coreui/react'
 import { useRole } from 'src/RoleContext'
+import { getAuth } from 'firebase/auth'
+import { getFirestore, doc, getDoc } from 'firebase/firestore'
 
 const _nav = () => {
+  const [isTeacherAssigned, setIsTeacherAssigned] = useState(false)
   const role = useRole()
+
+  useEffect(() => {
+    const fetchTeacherStatus = async () => {
+      const auth = getAuth()
+      const db = getFirestore()
+      const user = auth.currentUser
+
+      if (user) {
+        const userDoc = doc(db, 'users', user.uid)
+        const docSnap = await getDoc(userDoc)
+
+        if (docSnap.exists()) {
+          setIsTeacherAssigned(!!docSnap.data().myTeacher)
+        }
+      }
+    }
+
+    fetchTeacherStatus()
+  }, [])
 
   const adviserItems = [
     {
@@ -83,14 +105,16 @@ const _nav = () => {
     {
       component: CNavItem,
       name: 'Thesis Proposal',
-      to: '/thesisProposal',
+      to: isTeacherAssigned ? '/thesisProposal' : '#',
       icon: <CIcon icon={cilNoteAdd} customClassName="nav-icon" />,
+      disabled: !isTeacherAssigned,
     },
     {
       component: CNavItem,
       name: 'Upload Manuscript',
-      to: '/uploadManuscript',
+      to: isTeacherAssigned ? '/uploadManuscript' : '#',
       icon: <CIcon icon={cilPlus} customClassName="nav-icon" />,
+      disabled: !isTeacherAssigned,
     },
     {
       component: CNavItem,
