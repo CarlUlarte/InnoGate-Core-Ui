@@ -102,10 +102,21 @@ const AppSidebar = () => {
       onMouseLeave={handleMouseLeave}
     >
       <CSidebarHeader className="border-bottom">
-        <CSidebarBrand to="/">
-          <CIcon customClassName="sidebar-brand-full" icon={logo} height={32} />
-          <CIcon customClassName="sidebar-brand-narrow" icon={sygnet} height={32} />
-        </CSidebarBrand>
+      <CSidebarBrand
+        to="/"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: '2rem', // Adjust height based on your design
+          width: '100%', // Ensures it takes the full width of the sidebar
+        }}
+      >
+        <img
+          src="src/assets/brand/logoIT.png"
+          alt="Logo"
+          style={{ width: '170px', maxWidth: '100%' }}
+        />
+      </CSidebarBrand>
       </CSidebarHeader>
 
       {/* Sidebar Navigation */}
