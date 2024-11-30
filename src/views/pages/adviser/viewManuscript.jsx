@@ -32,7 +32,6 @@ const ViewManuscript = () => {
   const [currentGroup, setCurrentGroup] = useState(null)
   const [groupMembers, setGroupMembers] = useState([])
   const [feedback, setFeedback] = useState('')
-  const [studentNotes, setStudentNotes] = useState('')
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
@@ -129,9 +128,7 @@ const ViewManuscript = () => {
     setGroupMembers(group[1])
     // Get existing feedback if any
     const existingFeedback = group[1][0]?.feedback || ''
-    const existingStudentNotes = group[1][0]?.notes || ''
     setFeedback(existingFeedback)
-    setStudentNotes(existingStudentNotes)
   }
 
   const handlePageChange = (page) => {
@@ -208,7 +205,7 @@ const ViewManuscript = () => {
             </CCardBody>
           </CCard>
 
-          <CCard className="mb-4">
+          <CCard>
             <CCardHeader>Feedback</CCardHeader>
             <CCardBody>
               <CFormTextarea
@@ -235,18 +232,6 @@ const ViewManuscript = () => {
                   </>
                 )}
               </CButton>
-            </CCardBody>
-          </CCard>
-
-          <CCard>
-            <CCardHeader>Student's Notes</CCardHeader>
-            <CCardBody>
-              <CFormTextarea
-                rows={6}
-                value={studentNotes}
-                readOnly
-                placeholder="No notes available"
-              />
             </CCardBody>
           </CCard>
         </CCol>
