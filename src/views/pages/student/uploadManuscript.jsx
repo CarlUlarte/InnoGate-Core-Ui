@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { CCard, CCardBody, CCardHeader, CButton, CSpinner } from '@coreui/react'
+import { CCard, CCardBody, CCardHeader, CButton, CSpinner, CFormTextarea } from '@coreui/react'
 import { Maximize, Minimize } from 'lucide-react'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
 import { db, auth, storage } from 'src/backend/firebase'
@@ -11,12 +11,14 @@ const UploadManuscript = () => {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [uploaded, setUploaded] = useState(false)
-  const [showFeedback, setShowFeedback] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [currentUserData, setCurrentUserData] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [feedback, setFeedback] = useState(null)
+  const [notes, setNotes] = useState('') 
+  const [savedNotes, setSavedNotes] = useState('') 
   const previewRef = useRef(null)
 
   // Fetch current user's data and restore preview on component mount
@@ -32,7 +34,7 @@ const UploadManuscript = () => {
           })
           return
         }
-
+    
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
         if (!userDoc.exists()) {
           console.error('User document not found')
@@ -42,22 +44,26 @@ const UploadManuscript = () => {
           })
           return
         }
-
+    
         const userData = userDoc.data()
         console.log('User Data:', userData)
-
+    
         if (!userData.groupID) {
           console.error('User has no groupID')
           return
         }
-
+    
         setCurrentUserData(userData)
-
+    
         // Restore preview if file exists in userData
         if (userData.fileContainer && userData.fileContainer.file) {
           setUploaded(true)
           setPreview(userData.fileContainer.file)
+          setSavedNotes(userData.notes || '')
         }
+    
+        // Fetch feedback content from userData
+        setFeedback(userData.feedback || null)
       } catch (error) {
         console.error('Error fetching user data:', error)
         setToast({
@@ -82,6 +88,9 @@ const UploadManuscript = () => {
         setFile(selectedFile)
         const objectUrl = URL.createObjectURL(selectedFile)
         setPreview(objectUrl)
+        
+        // Reset notes when a new file is selected
+        setNotes('')
       } else {
         setToast({
           color: 'warning',
@@ -90,6 +99,37 @@ const UploadManuscript = () => {
       }
     },
   })
+
+  // Function to save notes
+  const saveNotes = async () => {
+    try {
+      const currentUser = auth.currentUser
+      if (!currentUser) {
+        setToast({
+          color: 'danger',
+          message: 'Please sign in to save notes.',
+        })
+        return
+      }
+
+      const userDocRef = doc(db, 'users', currentUser.uid)
+      await updateDoc(userDocRef, {
+        notes: notes
+      })
+
+      setSavedNotes(notes)
+      setToast({
+        color: 'success',
+        message: 'Notes saved successfully!',
+      })
+    } catch (error) {
+      console.error('Error saving notes:', error)
+      setToast({
+        color: 'danger',
+        message: `Error saving notes: ${error.message}`,
+      })
+    }
+  }
 
   // Function to update file container for all group members
   const updateGroupMembersFileContainers = async (fileUrl) => {
@@ -133,7 +173,7 @@ const UploadManuscript = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
+  
     if (!file) {
       setToast({
         color: 'warning',
@@ -141,7 +181,7 @@ const UploadManuscript = () => {
       })
       return
     }
-
+  
     if (!currentUserData?.groupID) {
       setToast({
         color: 'warning',
@@ -149,20 +189,20 @@ const UploadManuscript = () => {
       })
       return
     }
-
+  
     setLoading(true)
     try {
       console.log('Starting upload process...')
-
+  
       const storageRef = ref(
         storage,
         `manuscripts/${currentUserData.groupID}/${Date.now()}_${file.name}`,
       )
-
+  
       console.log('Storage reference created:', storageRef)
-
+  
       const uploadTask = uploadBytesResumable(storageRef, file)
-
+  
       uploadTask.on(
         'state_changed',
         (snapshot) => {
@@ -183,11 +223,39 @@ const UploadManuscript = () => {
             console.log('Upload completed, getting download URL...')
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref)
             console.log('Download URL obtained:', downloadURL)
-
+  
+            // Reset the feedback field in the user's Firestore document
+            await updateUserFeedback(currentUserData.uid)
+  
+            // Reset feedback to null on the client-side
+            setFeedback(null)
+  
+            // Update all group members' file containers with the new file URL
             await updateGroupMembersFileContainers(downloadURL)
+  
+            // Save notes if not empty
+            if (notes.trim()) {
+              await saveNotes()
+            }
 
+            if (!notes.trim()) {
+              setToast({
+                color: 'danger',
+                message: 'Please add a note about your manuscript before uploading.',
+              })
+              return
+            }
+          
+            // Rest of the existing validation and upload logic remains the same
+            if (!file) {
+              setToast({
+                color: 'warning',
+                message: 'Please select a file first.',
+              })
+              return
+            }
+  
             setUploaded(true)
-            setShowFeedback(true)
             setToast({
               color: 'success',
               message: 'Manuscript uploaded successfully!',
@@ -213,12 +281,25 @@ const UploadManuscript = () => {
       setLoading(false)
     }
   }
+  
+  // Function to update the feedback field to null in the user's Firestore document
+  const updateUserFeedback = async (userId) => {
+    try {
+      const userDocRef = doc(db, 'users', userId)
+      await updateDoc(userDocRef, {
+        feedback: null, // Reset the feedback field
+      })
+      console.log('Feedback field reset successfully in Firestore')
+    } catch (error) {
+      console.error('Error resetting feedback in Firestore:', error)
+    }
+  }
 
   const handleEdit = () => {
     setUploaded(false)
-    setShowFeedback(false)
     setFile(null)
     setPreview(null)
+    setNotes('')
   }
 
   const toggleFullScreen = () => {
@@ -304,6 +385,22 @@ const UploadManuscript = () => {
                 </div>
               )}
 
+              <div className="mb-3">
+                <CFormTextarea
+                  placeholder="Please add a note about your manuscript"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  required
+                  className={!notes.trim() ? 'is-invalid' : ''}
+                />
+                {!notes.trim() && (
+                  <div className="invalid-feedback">
+                    A note is required before uploading your manuscript.
+                  </div>
+                )}
+              </div>
+
               <p className="file-type-info">Accepted File Type: PDF only</p>
 
               <CButton color="primary" onClick={handleSubmit} disabled={!file || loading}>
@@ -336,14 +433,25 @@ const UploadManuscript = () => {
         </CCardBody>
       </CCard>
 
-      {showFeedback && (
-        <CCard>
-          <CCardHeader>Adviser Feedback</CCardHeader>
-          <CCardBody>
-            <p>Adviser feedback goes here...</p>
-          </CCardBody>
-        </CCard>
-      )}
+      <div className="row">
+        <div className="col-md-6 mb-2">
+          <CCard>
+            <CCardHeader>Adviser Feedback</CCardHeader>
+            <CCardBody>
+              <p>{feedback || 'No feedback available'}</p>
+            </CCardBody>
+          </CCard>
+        </div>
+
+        <div className="col-md-6 mb-2">
+          <CCard>
+            <CCardHeader>Notes</CCardHeader>
+            <CCardBody>
+              <p>{savedNotes || 'No notes added'}</p>
+            </CCardBody>
+          </CCard>
+        </div>
+      </div>
 
       <CustomToast toast={toast} setToast={setToast} />
     </div>
