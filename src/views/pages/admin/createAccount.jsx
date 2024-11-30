@@ -23,7 +23,16 @@ import {
   CTableDataCell,
   CSpinner,
 } from '@coreui/react'
-import { setDoc, collection, getDocs, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore'
+import {
+  setDoc,
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+  query,
+  where,
+} from 'firebase/firestore'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from 'src/backend/firebase'
 import CustomToast from 'src/components/Toast/CustomToast'
@@ -52,17 +61,17 @@ const CreateAccount = () => {
     const addFileContainersToExistingStudents = async () => {
       const studentsQuery = query(collection(db, 'users'), where('role', '==', 'Student'))
       const studentsSnapshot = await getDocs(studentsQuery)
-      
+
       studentsSnapshot.forEach(async (studentDoc) => {
         const studentData = studentDoc.data()
-        
+
         // Check if file container already exists
         if (!studentData.fileContainer) {
           await updateDoc(doc(db, 'users', studentDoc.id), {
             fileContainer: {
               file: null,
-              uploadedAt: null
-            }
+              uploadedAt: null,
+            },
           })
         }
       })
@@ -124,8 +133,8 @@ const CreateAccount = () => {
           myAdviser: '', // Placeholder, can be updated later
           fileContainer: {
             file: null,
-            uploadedAt: null
-          }
+            uploadedAt: null,
+          },
         }),
       })
 

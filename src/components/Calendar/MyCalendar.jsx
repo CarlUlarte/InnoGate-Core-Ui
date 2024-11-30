@@ -36,8 +36,15 @@ const MyCalendar = ({ selectable = false, showAddButton = false, role }) => {
   useEffect(() => {
     const loadGroups = async () => {
       try {
-        const groups = await fetchGroups()
-        setGroupOptions(groups)
+        // Check if groups data is available in localStorage
+        const storedGroups = localStorage.getItem('groups')
+        if (storedGroups) {
+          setGroupOptions(JSON.parse(storedGroups))
+        } else {
+          const groups = await fetchGroups()
+          setGroupOptions(groups)
+          localStorage.setItem('groups', JSON.stringify(groups))
+        }
       } catch (error) {
         console.error('Error fetching groups:', error)
       }
@@ -59,7 +66,15 @@ const MyCalendar = ({ selectable = false, showAddButton = false, role }) => {
         }
       })
       setAllEvents(eventsData)
+      // Store events in localStorage
+      localStorage.setItem('events', JSON.stringify(eventsData))
     })
+
+    // Check if events are available in localStorage
+    const storedEvents = localStorage.getItem('events')
+    if (storedEvents) {
+      setAllEvents(JSON.parse(storedEvents))
+    }
 
     return () => unsubscribe()
   }, [])

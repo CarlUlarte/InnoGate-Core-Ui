@@ -19,6 +19,12 @@ const HeaderSearchBar = () => {
       roles: ['Student'],
     },
     {
+      name: 'Thesis Proposal',
+      path: '/thesisProposal',
+      description: 'Manage thesis proposals',
+      roles: ['Student'],
+    },
+    {
       name: 'Schedule',
       path: '/scheduleStudent',
       description: 'View and manage defense schedule',
