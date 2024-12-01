@@ -10,25 +10,29 @@ import {
   CModalBody,
   CModalFooter,
   CFormCheck,
-  CRow,
-  CCol,
+  CTable,
+  CTableBody,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
+  CTableDataCell,
 } from '@coreui/react'
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore'
 import { db } from 'src/backend/firebase'
 import CustomToast from 'src/components/Toast/CustomToast'
-import { auth } from 'src/backend/firebase' // Import auth to get the current user
+import { auth } from 'src/backend/firebase'
 
 const colorPalette = ['#FF5733', '#33FF57', '#3357FF', '#FF33A6', '#A633FF', '#FF8333', '#33FF8A']
 
 const MyStudents = () => {
   const [students, setStudents] = useState([])
-  const [availableStudents, setAvailableStudents] = useState([]) // For students with empty myTeacher field
+  const [availableStudents, setAvailableStudents] = useState([])
   const [modalVisible, setModalVisible] = useState(false)
-  const [enrollModalVisible, setEnrollModalVisible] = useState(false) // Modal for enrolling students
+  const [enrollModalVisible, setEnrollModalVisible] = useState(false)
   const [selectedStudents, setSelectedStudents] = useState([])
-  const [selectedEnrollStudents, setSelectedEnrollStudents] = useState([]) // For enrolling students
+  const [selectedEnrollStudents, setSelectedEnrollStudents] = useState([])
   const [toast, setToast] = useState(null)
-  const [teacherID, setTeacherID] = useState(null) // Store the teacher's ID
+  const [teacherID, setTeacherID] = useState(null)
 
   useEffect(() => {
     const fetchTeacherData = async () => {
@@ -49,7 +53,7 @@ const MyStudents = () => {
       const querySnapshot = await getDocs(collection(db, 'users'))
       const studentsList = querySnapshot.docs
         .map((doc) => ({ ...doc.data(), id: doc.id }))
-        .filter((user) => user.role === 'Student' && user.myTeacher === teacherID) // Fetch only enrolled students
+        .filter((user) => user.role === 'Student' && user.myTeacher === teacherID)
       studentsList.sort((a, b) => (a.groupID || '').localeCompare(b.groupID || ''))
       setStudents(studentsList)
     }
@@ -58,7 +62,7 @@ const MyStudents = () => {
       const querySnapshot = await getDocs(collection(db, 'users'))
       const availableList = querySnapshot.docs
         .map((doc) => ({ ...doc.data(), id: doc.id }))
-        .filter((user) => user.role === 'Student' && !user.myTeacher) // Fetch students without a teacher
+        .filter((user) => user.role === 'Student' && !user.myTeacher)
       setAvailableStudents(availableList)
     }
 
@@ -95,15 +99,15 @@ const MyStudents = () => {
     try {
       await Promise.all(
         selectedStudents.map((studentId) =>
-          updateDoc(doc(db, 'users', studentId), { groupID: newGroupID })
-        )
+          updateDoc(doc(db, 'users', studentId), { groupID: newGroupID }),
+        ),
       )
       setStudents(
-        students.map((student) =>
-          selectedStudents.includes(student.id)
-            ? { ...student, groupID: newGroupID }
-            : student
-        ).sort((a, b) => (a.groupID || '').localeCompare(b.groupID || ''))
+        students
+          .map((student) =>
+            selectedStudents.includes(student.id) ? { ...student, groupID: newGroupID } : student,
+          )
+          .sort((a, b) => (a.groupID || '').localeCompare(b.groupID || '')),
       )
       setToast({
         color: 'success',
@@ -132,8 +136,8 @@ const MyStudents = () => {
     try {
       await Promise.all(
         selectedEnrollStudents.map((studentId) =>
-          updateDoc(doc(db, 'users', studentId), { myTeacher: teacherID })
-        )
+          updateDoc(doc(db, 'users', studentId), { myTeacher: teacherID }),
+        ),
       )
       setStudents([
         ...students,
@@ -177,42 +181,52 @@ const MyStudents = () => {
         </div>
       </CCardHeader>
       <CCardBody>
-        <CRow className="mb-4">
-          <CCol sm={4}>
-            <strong>Name</strong>
-          </CCol>
-          <CCol sm={4}>
-            <strong>Email</strong>
-          </CCol>
-          <CCol sm={4}>
-            <strong>Group ID</strong>
-          </CCol>
-        </CRow>
-        {students.length === 0 ? (
-          <p>No students enrolled.</p>
-        ) : (
-          students.map((student, index) => (
-            <CRow key={index} className="mb-2 align-items-center">
-              <CCol sm={4}>{student.name}</CCol>
-              <CCol sm={4}>{student.email}</CCol>
-              <CCol sm={4} className="d-flex align-items-center">
-                {student.groupID && (
-                  <span
-                    style={{
-                      width: '10px',
-                      height: '10px',
-                      backgroundColor: getGroupColor(student.groupID),
-                      borderRadius: '50%',
-                      display: 'inline-block',
-                      marginRight: '8px',
-                    }}
-                  ></span>
-                )}
-                {student.groupID || 'Not grouped'}
-              </CCol>
-            </CRow>
-          ))
-        )}
+        <CTable hover responsive small striped>
+          <CTableHead>
+            <CTableRow>
+              <CTableHeaderCell scope="col" style={{ width: '33%' }}>
+                Name
+              </CTableHeaderCell>
+              <CTableHeaderCell scope="col" style={{ width: '33%' }}>
+                Email
+              </CTableHeaderCell>
+              <CTableHeaderCell scope="col" style={{ width: '33%' }}>
+                Group ID
+              </CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+          <CTableBody>
+            {students.length === 0 ? (
+              <CTableRow>
+                <CTableDataCell colSpan={3} className="text-center">
+                  No students enrolled.
+                </CTableDataCell>
+              </CTableRow>
+            ) : (
+              students.map((student, index) => (
+                <CTableRow key={index}>
+                  <CTableDataCell>{student.name}</CTableDataCell>
+                  <CTableDataCell>{student.email}</CTableDataCell>
+                  <CTableDataCell className="d-flex align-items-center">
+                    {student.groupID && (
+                      <span
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          backgroundColor: getGroupColor(student.groupID),
+                          borderRadius: '50%',
+                          display: 'inline-block',
+                          marginRight: '8px',
+                        }}
+                      ></span>
+                    )}
+                    {student.groupID || 'Not grouped'}
+                  </CTableDataCell>
+                </CTableRow>
+              ))
+            )}
+          </CTableBody>
+        </CTable>
       </CCardBody>
 
       {/* Group Students Modal */}
@@ -221,26 +235,36 @@ const MyStudents = () => {
           <CModalTitle>Group Students</CModalTitle>
         </CModalHeader>
         <CModalBody>
-          <CRow>
-            <CCol sm={2} className="d-flex justify-content-center"><strong>Select</strong></CCol>
-            <CCol sm={4}><strong>Name</strong></CCol>
-            <CCol sm={6}><strong>Email</strong></CCol>
-          </CRow>
-          {students
-            .filter((student) => !student.groupID) // Filter only students that aren't grouped yet
-            .map((student) => (
-              <CRow key={student.id} className="align-items-center">
-                <CCol sm={2} className="d-flex justify-content-center">
-                  <CFormCheck
-                    checked={selectedStudents.includes(student.id)}
-                    onChange={() => toggleStudentSelection(student.id)}
-                    disabled={selectedStudents.length === 3 && !selectedStudents.includes(student.id)}
-                  />
-                </CCol>
-                <CCol sm={4}>{student.name}</CCol>
-                <CCol sm={6}>{student.email}</CCol>
-              </CRow>
-            ))}
+          <CTable small>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell style={{ width: '20%' }} className="text-center">
+                  Select
+                </CTableHeaderCell>
+                <CTableHeaderCell style={{ width: '40%' }}>Name</CTableHeaderCell>
+                <CTableHeaderCell style={{ width: '40%' }}>Email</CTableHeaderCell>
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              {students
+                .filter((student) => !student.groupID)
+                .map((student) => (
+                  <CTableRow key={student.id}>
+                    <CTableDataCell className="text-center">
+                      <CFormCheck
+                        checked={selectedStudents.includes(student.id)}
+                        onChange={() => toggleStudentSelection(student.id)}
+                        disabled={
+                          selectedStudents.length === 3 && !selectedStudents.includes(student.id)
+                        }
+                      />
+                    </CTableDataCell>
+                    <CTableDataCell>{student.name}</CTableDataCell>
+                    <CTableDataCell>{student.email}</CTableDataCell>
+                  </CTableRow>
+                ))}
+            </CTableBody>
+          </CTable>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={() => setModalVisible(false)}>
@@ -258,23 +282,31 @@ const MyStudents = () => {
           <CModalTitle>Enroll Students</CModalTitle>
         </CModalHeader>
         <CModalBody>
-          <CRow>
-            <CCol sm={2} className="d-flex justify-content-center"><strong>Select</strong></CCol>
-            <CCol sm={4}><strong>Name</strong></CCol>
-            <CCol sm={6}><strong>Email</strong></CCol>
-          </CRow>
-          {availableStudents.map((student) => (
-            <CRow key={student.id} className="align-items-center">
-              <CCol sm={2} className="d-flex justify-content-center">
-                <CFormCheck
-                  checked={selectedEnrollStudents.includes(student.id)}
-                  onChange={() => toggleEnrollStudentSelection(student.id)}
-                />
-              </CCol>
-              <CCol sm={4}>{student.name}</CCol>
-              <CCol sm={6}>{student.email}</CCol>
-            </CRow>
-          ))}
+          <CTable small>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell style={{ width: '20%' }} className="text-center">
+                  Select
+                </CTableHeaderCell>
+                <CTableHeaderCell style={{ width: '40%' }}>Name</CTableHeaderCell>
+                <CTableHeaderCell style={{ width: '40%' }}>Email</CTableHeaderCell>
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              {availableStudents.map((student) => (
+                <CTableRow key={student.id}>
+                  <CTableDataCell className="text-center">
+                    <CFormCheck
+                      checked={selectedEnrollStudents.includes(student.id)}
+                      onChange={() => toggleEnrollStudentSelection(student.id)}
+                    />
+                  </CTableDataCell>
+                  <CTableDataCell>{student.name}</CTableDataCell>
+                  <CTableDataCell>{student.email}</CTableDataCell>
+                </CTableRow>
+              ))}
+            </CTableBody>
+          </CTable>
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={() => setEnrollModalVisible(false)}>
@@ -285,7 +317,6 @@ const MyStudents = () => {
           </CButton>
         </CModalFooter>
       </CModal>
-
 
       {/* Custom Toast Notification */}
       <CustomToast toast={toast} setToast={setToast} />
