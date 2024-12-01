@@ -20,10 +20,16 @@ import {
   CBadge,
   CAvatar,
 } from '@coreui/react'
-import { cilCheckCircle, cilXCircle, cilSync } from '@coreui/icons'
+import { 
+  cilCheckCircle, 
+  cilXCircle, 
+  cilSync, 
+  cilCloudDownload 
+} from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
-import { db, auth } from 'src/backend/firebase'
+import { db, auth, storage } from 'src/backend/firebase'
 import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore'
+import { ref, getDownloadURL } from 'firebase/storage'
 import { fetchMembersByGroup } from 'src/components/Calendar/firestoreUtils.js'
 import CustomToast from 'src/components/Toast/CustomToast'
 
@@ -38,6 +44,7 @@ const ProposalManagement = () => {
   const [loading, setLoading] = useState(true)
   const [teacherID, setTeacherID] = useState(null)
   const [teacherGroups, setTeacherGroups] = useState([])
+  const [downloadLoading, setDownloadLoading] = useState({})
 
   // First, fetch teacher data and their enrolled students' groups
   useEffect(() => {
@@ -95,6 +102,7 @@ const ProposalManagement = () => {
     fetchTeacherData()
   }, [])
 
+  // Existing useEffect for loading group members
   useEffect(() => {
     const loadGroupMembers = async () => {
       if (selectedGroup) {
@@ -114,6 +122,44 @@ const ProposalManagement = () => {
     loadGroupMembers()
   }, [selectedGroup])
 
+  // New function to handle abstract form download
+  const handleDownloadAbstract = async (proposalId, abstractFormUrl) => {
+    // Start loading for this specific proposal
+    setDownloadLoading(prev => ({...prev, [proposalId]: true}))
+
+    try {
+      // Fetch the download URL
+      const downloadURL = await getDownloadURL(ref(storage, abstractFormUrl))
+      
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a')
+      link.href = downloadURL
+      
+      // Extract filename from URL or use a default
+      const filename = abstractFormUrl.split('/').pop().split('?')[0] || 'abstract.pdf'
+      link.download = filename
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      setToast({
+        color: 'success',
+        message: 'Abstract form downloaded successfully',
+      })
+    } catch (error) {
+      console.error('Error downloading abstract form:', error)
+      setToast({
+        color: 'danger',
+        message: 'Failed to download abstract form',
+      })
+    } finally {
+      // Stop loading for this proposal
+      setDownloadLoading(prev => ({...prev, [proposalId]: false}))
+    }
+  }
+
+  // Rest of the existing methods (handleGroupSelect, handleApprove, handleReject, etc.)
   const handleGroupSelect = (groupID) => {
     setSelectedGroup(groupID)
   }
@@ -379,9 +425,37 @@ const ProposalManagement = () => {
                       </small>
                     </CCol>
                   </CRow>
+                  {/* New Abstract Form Download Section */}
+                  <CRow className="mt-2">
+                    <CCol>
+                    <div className="d-flex justify-content-end w-100">
+                    <CButton
+                      style={{ backgroundColor: '#3634a3', color: 'white' }}  // Set custom background and font color
+                      size="sm"
+                      onClick={() => handleDownloadAbstract(proposal.id, proposal.abstractForm)}
+                      disabled={!proposal.abstractForm || downloadLoading[proposal.id]}
+                      className="ms-auto"  // Align to the left (move to the other side)
+                    >
+                      {downloadLoading[proposal.id] ? (
+                        <>
+                          <CSpinner size="sm" className="me-1" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <CIcon icon={cilCloudDownload} className="me-1" />
+                          Download Abstract
+                        </>
+                      )}
+                    </CButton>
+                    </div>
+                    
+
+                    </CCol>
+                  </CRow>
                 </CCardBody>
                 <CCardBody className="border-top p-2">
-                  <CButtonGroup className="w-100">
+                <CButtonGroup className="w-100">
                     <CButton
                       color="success"
                       size="sm"

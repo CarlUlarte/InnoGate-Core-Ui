@@ -16,7 +16,7 @@ import {
   CListGroup,
   CListGroupItem,
 } from '@coreui/react'
-import { cilCheckCircle, cilXCircle } from '@coreui/icons'
+import { cilCheckCircle, cilXCircle, cilCloudDownload } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
 import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore'
 import { db, auth } from 'src/backend/firebase'
@@ -28,7 +28,7 @@ const GroupRequest = () => {
   const [confirmModal, setConfirmModal] = useState(false)
   const [modalAction, setModalAction] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [toast, setToast] = useState(null) // Add toast state
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     const fetchAdviserRequests = async () => {
@@ -106,7 +106,7 @@ const GroupRequest = () => {
       setToast({
         color: 'success',
         message: `Group request ${accepted ? 'accepted' : 'rejected'} successfully!`,
-      }) // Success toast
+      })
       setSelectedGroup(null)
       setConfirmModal(false)
     } catch (error) {
@@ -114,7 +114,49 @@ const GroupRequest = () => {
       setToast({
         color: 'danger',
         message: 'Failed to process request. Please try again.',
-      }) // Error toast
+      })
+    }
+  }
+
+  const downloadAbstract = async () => {
+    if (!selectedGroup) return
+
+    try {
+      const proposalsRef = collection(db, 'proposals')
+      const proposalQuery = query(
+        proposalsRef,
+        where('groupID', '==', selectedGroup.groupID),
+        where('status', '==', 'accepted'),
+      )
+      const proposalSnapshot = await getDocs(proposalQuery)
+
+      if (!proposalSnapshot.empty) {
+        const proposalDoc = proposalSnapshot.docs[0]
+        const abstractFormUrl = proposalDoc.data().abstractForm
+
+        if (abstractFormUrl) {
+          const link = document.createElement('a')
+          link.href = abstractFormUrl
+          link.download = `${selectedGroup.groupID}_abstract.pdf` // Customize file name
+          link.click()
+        } else {
+          setToast({
+            color: 'warning',
+            message: 'No abstract file available for download.',
+          })
+        }
+      } else {
+        setToast({
+          color: 'warning',
+          message: 'No proposal found for this group.',
+        })
+      }
+    } catch (error) {
+      console.error('Error downloading abstract form:', error)
+      setToast({
+        color: 'danger',
+        message: 'Failed to download abstract. Please try again.',
+      })
     }
   }
 
@@ -124,7 +166,6 @@ const GroupRequest = () => {
 
   return (
     <CContainer fluid className="d-flex" style={{ fontSize: '0.875rem' }}>
-      {/* Sidebar - Group Requests List */}
       <CCard style={{ width: '250px', marginRight: '15px' }}>
         <CCardHeader className="py-2">
           <h6 className="m-0">Pending Group Requests</h6>
@@ -152,7 +193,6 @@ const GroupRequest = () => {
         </CCardBody>
       </CCard>
 
-      {/* Main Content - Group Request Details */}
       <CCard style={{ flex: 1 }}>
         <CCardHeader className="py-2">
           <h6 className="m-0">
@@ -162,7 +202,6 @@ const GroupRequest = () => {
         <CCardBody>
           {selectedGroup ? (
             <div>
-              {/* Group Members */}
               <CCard className="mb-3">
                 <CCardHeader className="py-2">
                   <small className="m-0 fw-bold">Group Members</small>
@@ -180,32 +219,39 @@ const GroupRequest = () => {
                 </CCardBody>
               </CCard>
 
-              {/* Approved Topic Details */}
               <CCard className="mb-3">
                 <CCardHeader className="py-2">
                   <small className="m-0 fw-bold">Approved Topic</small>
                 </CCardHeader>
                 <CCardBody className="p-2">
-                  <h6 className="mb-2">{selectedGroup.approvedProposal.title}</h6>
+                  <h6 className="mb-2">{selectedGroup.approvedProposal?.title}</h6>
                   <p className="mb-2" style={{ fontSize: '0.8rem' }}>
-                    {selectedGroup.approvedProposal.description}
+                    {selectedGroup.approvedProposal?.description}
                   </p>
                   <CRow>
                     <CCol>
                       <small>
-                        <strong>Client:</strong> {selectedGroup.approvedProposal.client}
+                        <strong>Client:</strong> {selectedGroup.approvedProposal?.client}
                       </small>
                     </CCol>
                     <CCol>
                       <small>
-                        <strong>Field:</strong> {selectedGroup.approvedProposal.field}
+                        <strong>Field:</strong> {selectedGroup.approvedProposal?.field}
                       </small>
                     </CCol>
                   </CRow>
+                  <CButton
+                    style={{ backgroundColor: '#3634a3', color: 'white' }} 
+                    size="sm"
+                    className="mt-3"
+                    onClick={downloadAbstract}
+                  >
+                    <CIcon icon={cilCloudDownload} className="me-1" />
+                    Download Abstract
+                  </CButton>
                 </CCardBody>
               </CCard>
 
-              {/* Action Buttons */}
               <CButtonGroup className="w-100">
                 <CButton color="success" size="sm" onClick={() => openConfirmModal('accept')}>
                   <CIcon icon={cilCheckCircle} className="me-1" />
@@ -225,7 +271,6 @@ const GroupRequest = () => {
         </CCardBody>
       </CCard>
 
-      {/* Confirmation Modal */}
       <CModal visible={confirmModal} onClose={() => setConfirmModal(false)} size="sm">
         <CModalHeader>
           <CModalTitle>
@@ -252,6 +297,7 @@ const GroupRequest = () => {
           </CButton>
         </CModalFooter>
       </CModal>
+
       <CustomToast toast={toast} setToast={setToast} />
     </CContainer>
   )

@@ -294,6 +294,9 @@ const GroupDetails = () => {
     setModalVisible(false); // Close the modal
     setSelectedAdviser(null); // Clear the selected adviser
   }}
+  onShow={() => {
+    setSelectedAdviser(null); // Reset the selected adviser when modal opens
+  }}
 >
   <CModalHeader>
     <CModalTitle>Select an Adviser</CModalTitle>
@@ -336,11 +339,18 @@ const GroupDetails = () => {
     >
       Cancel
     </CButton>
-    <CButton color="primary" onClick={handleSubmitRequest}>
+    <CButton
+      color="primary"
+      onClick={() => {
+        handleSubmitRequest(); // Trigger the submission logic
+      }}
+      disabled={!selectedAdviser} // Prevent submission if no adviser is selected
+    >
       Submit Request
     </CButton>
   </CModalFooter>
 </CModal>
+
 
       <CustomToast toast={toast} setToast={setToast} /> {/* Toast added */}
     </CContainer>
